@@ -1,0 +1,11 @@
+[package]
+name = "input-rs"
+version = "0.1.0"
+authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
+
+[dependencies]
+"glfw" = "*"
+"log" = "*"
+"time" = "*"
+"bitflags" = "*"
+"yaml-rust" = "*"

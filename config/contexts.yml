@@ -1,0 +1,14 @@
+contexts:
+  - id : default
+    priority: 1
+    mappings:
+      - raw:
+          type : Key
+          args :
+            action : Release
+            scancode : 53
+        mapped:
+          constant_id : 1
+          args :
+            - scancode
+
