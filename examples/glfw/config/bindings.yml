@@ -1,0 +1,28 @@
+contexts:
+  - id : default
+    mappings:
+      - raw:
+          raw_type : Key
+          args :
+            action : Release
+            keycode : Escape
+        mapped:
+          constant_id : Close
+          args : []
+      - raw :
+          raw_type : Key
+          args :
+            action : Release
+            keycode : W
+        mapped :
+          constant_id : MoveForward
+          args : []
+  - id : ui
+    mappings:
+      - raw:
+          raw_type : Char
+          args : []
+        mapped:
+          constant_id : Text
+          args:
+            - Value

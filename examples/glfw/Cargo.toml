@@ -1,0 +1,10 @@
+[package]
+name = "glfw_test"
+version = "0.1.0"
+authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
+
+[dependencies]
+glfw = "*"
+input = { path = "../.." }
+glfw_input_source = { path = "../../sources/glfw-input-source/" }
+log = "*"

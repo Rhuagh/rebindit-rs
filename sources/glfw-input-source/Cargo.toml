@@ -1,8 +1,9 @@
 [package]
-name = "input"
+name = "glfw_input_source"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
-bitflags = "*"
-amethyst_config = { git = "https://github.com/amethyst/amethyst.git" }
+glfw = "*"
+input = { path = "../.." }
+log = "*"

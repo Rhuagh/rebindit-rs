@@ -1,6 +1,0 @@
-actions:
-  - id : 1
-    name : exit
-    desc : Exit Application
-states: []
-ranges : []
