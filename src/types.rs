@@ -1,6 +1,8 @@
 pub use super::config::KeyCode;
 
 use std::cmp::Ordering;
+use std::collections::HashMap;
+use std;
 
 #[derive(Debug)]
 pub enum DeviceType {
@@ -13,6 +15,7 @@ pub enum DeviceType {
 pub enum RawType {
     Button,
     Key,
+    Motion,
     Char
 }
 
@@ -32,10 +35,22 @@ bitflags! {
     }
 }
 
+pub type ButtonId = u32;
+
+#[derive(Debug)]
+pub enum Modifier {
+    ALT,
+    CONTROL,
+    SHIFT,
+    SUPER
+}
+
 #[derive(Debug)]
 pub struct RawArgs {
     pub action : Option<RawAction>,
-    pub keycode : Option<KeyCode>
+    pub keycode : Option<KeyCode>,
+    pub button : Option<ButtonId>,
+    pub modifier : Option<Modifier>
 }
 
 #[derive(Debug)]
@@ -78,12 +93,20 @@ pub struct Mapping<C> {
 }
 
 #[derive(Debug)]
-pub struct Context<C> {
-    pub id : String,
-    pub mappings : Vec<Mapping<C>>
+pub struct StateInfo {
+    pub active : bool,
+    pub start_time : f64,
+    pub stop_time : f64
 }
 
-#[derive(Debug, Eq)]
+#[derive(Debug)]
+pub struct Context<C : std::hash::Hash + std::cmp::Eq> {
+    pub id : String,
+    pub mappings : Vec<Mapping<C>>,
+    pub state_storage : HashMap<C, StateInfo>
+}
+
+#[derive(Debug, Eq, Clone)]
 pub struct ActiveContext {
     pub priority : u32,
     pub index : usize

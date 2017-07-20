@@ -1,18 +1,16 @@
 #[macro_use]
 extern crate log;
-extern crate glfw;
+extern crate glutin;
 extern crate input;
-extern crate glfw_input_source;
-
-use std::sync::mpsc::Receiver;
-use glfw::Context;
+extern crate glutin_input_source;
 
 use input::InputHandler;
-use glfw_input_source::GlfwInputSource;
+use glutin_input_source::GlutinInputSource;
 use input::event::{Event, WindowEvent, ControllerEvent};
 use input::types::{MappedType, ToMappedType};
 
 use std::str::FromStr;
+use glutin::GlContext;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum UIAction {
@@ -102,46 +100,42 @@ impl FromStr for ControllerAction {
     }
 }
 
-fn window_init(width : u32, height: u32, title : &str) -> (glfw::Glfw, glfw::Window, Receiver<(f64, glfw::WindowEvent)>) {
-    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 2));
-    glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
-    glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
-    glfw.set_error_callback(glfw::FAIL_ON_ERRORS);
-    let (mut window, events) =
-        match glfw.create_window(width, height, title, glfw::WindowMode::Windowed) {
-            Some(d) => d,
-            None => panic!("Window was not created")
-        };
-    window.set_all_polling(true);
-    (glfw, window, events)
-}
-
 fn main() {
     debug!("Starting");
-    let (glfw, mut window, events) = window_init(1024, 768, "Test");
+    let events_loop = glutin::EventsLoop::new();
+    let window = glutin::WindowBuilder::new()
+        .with_title("Hello, world!")
+        .with_dimensions(1024, 768);
+    let context = glutin::ContextBuilder::new()
+        .with_vsync(true);
+    let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
+
+    unsafe {
+        gl_window.make_current().unwrap();
+    }
+
     debug!("Window initialized");
 
     let mut input_handler = InputHandler::<ControllerAction>::new()
         .with_bindings_file("config/bindings.yml")
-        .with_input_source(GlfwInputSource::new(glfw, events, (1024.0, 768.0)));
+        .with_input_source(GlutinInputSource::new(events_loop, (1024.0, 768.0)));
 
-    input_handler.activate_context("default", 1);
-    while !window.should_close() {
+    let mut running = true;
+    while running {
         for event in input_handler.process() {
             match event {
                 Event::Window(WindowEvent::Close) => {
                     println!("closing!");
-                    window.set_should_close(true);
+                    running = false;
                 },
                 Event::Controller(ControllerEvent::Action(ControllerAction::UI(UIAction::Close), _)) => {
                     println!("closing!");
-                    window.set_should_close(true);
+                    running = false;
                 }
                 _ => ()
             }
         }
-        window.swap_buffers();
+        gl_window.swap_buffers().unwrap();
     }
 
     return

@@ -1,57 +1,21 @@
 #[macro_use]
-extern crate amethyst_config;
+extern crate bitflags;
 
 #[macro_use]
-extern crate bitflags;
+extern crate serde_derive;
+extern crate serde_yaml;
+extern crate time;
 
 pub mod config;
 pub mod event;
 pub mod types;
 pub mod raw;
-
-use amethyst_config::Element;
+pub mod mapping;
 
 pub struct InputHandler<C> where C : std::hash::Hash + std::cmp::Eq + std::str::FromStr {
     sources : Vec<Box<raw::RawInputSource>>,
     contexts : Vec<types::Context<C>>,
     active_contexts : Vec<types::ActiveContext>
-}
-
-fn get_keycode(raw_input : &raw::RawInput) -> Option<event::Argument> {
-    match raw_input.event {
-        raw::RawInputEvent::Key(ref keycode, _, _) => Some(event::Argument::KeyCode(keycode.clone())),
-        _ => None
-    }
-}
-
-fn get_modifiers(raw_input: &raw::RawInput) -> Option<event::Argument> {
-    match raw_input.event {
-        raw::RawInputEvent::Key(_, _, modifiers) => Some(event::Argument::Modifiers(modifiers.into())),
-        raw::RawInputEvent::Button(_, _, _, modifiers) => Some(event::Argument::Modifiers(modifiers.into())),
-        _ => None
-    }
-}
-
-fn get_value(raw_input: &raw::RawInput) -> Option<event::Argument> {
-    match raw_input.event {
-        raw::RawInputEvent::Char(ch) => Some(event::Argument::Value(ch)),
-        _ => None
-    }
-}
-
-fn get_action(raw_input: &raw::RawInput) -> Option<event::Argument> {
-    match raw_input.event {
-        raw::RawInputEvent::Key(_, ref action, _) => Some(event::Argument::Action(action.clone().into())),
-        raw::RawInputEvent::Button(_, _, ref action, _) => Some(event::Argument::Action(action.clone().into())),
-        _ => None
-    }
-}
-
-fn get_cursor_position(raw_input: &raw::RawInput) -> Option<event::Argument> {
-    match raw_input.event {
-        raw::RawInputEvent::Button(_, (x, y), _, _) => Some(event::Argument::CursorPosition(x, y)),
-        _ => None
-    }
 }
 
 impl<C> InputHandler<C>
@@ -83,7 +47,8 @@ impl<C> InputHandler<C>
     }
 
     pub fn with_bindings_file(self, file: &str) -> Self {
-        let bindings = config::ConfigBindings::from_file(file).expect("Failed reading bindings file");
+        let f = std::fs::File::open(file).expect("Failed opening bindings config file");
+        let bindings : config::ConfigBindings = serde_yaml::from_reader(f).expect("Failed parsing Yaml string");
         let mut contexts : Vec<types::Context<C>> = bindings.into();
         for c in &mut contexts {
             for m in &mut c.mappings {
@@ -126,48 +91,16 @@ impl<C> InputHandler<C>
     fn process_window_input(&self, raw_input : &raw::RawInput) -> Option<event::WindowEvent> {
         match raw_input.event {
             raw::RawInputEvent::Resize(x, y) => Some(event::WindowEvent::Resize(x, y)),
-            raw::RawInputEvent::Focus(b) => Some(event::WindowEvent::Focus(if b { event::FocusAction::Enter } else { event::FocusAction::Exit })),
+            raw::RawInputEvent::Focus(b) => Some(event::WindowEvent::Focus(
+                if b { event::FocusAction::Enter } else { event::FocusAction::Exit })),
             raw::RawInputEvent::Close => Some(event::WindowEvent::Close),
             _ => None
         }
     }
 
-    fn check_mapping(&self, mapping : &types::Mapping<C>, raw_input : &raw::RawInput) -> bool {
-        false // TODO
-    }
-
-    fn as_action(&self, mapped: &types::Mapped<C>, raw_input : &raw::RawInput) -> event::ControllerEvent<C> {
-        event::ControllerEvent::Action(mapped.action.clone().unwrap(), self.arguments(&mapped.args, raw_input))
-    }
-
-    fn arguments(&self, args : &Vec<types::ActionArgument>, raw_input : &raw::RawInput) -> Vec<event::Argument> {
-        args.iter().filter_map(|arg| {
-            match arg {
-                &types::ActionArgument::KeyCode => get_keycode(raw_input),
-                &types::ActionArgument::Value => get_value(raw_input),
-                &types::ActionArgument::Modifiers => get_modifiers(raw_input),
-                &types::ActionArgument::Action => get_action(raw_input),
-                &types::ActionArgument::CursorPosition => get_cursor_position(raw_input),
-            }
-        }).collect()
-    }
-
-    fn process_controller_input_in_context(&self, context : &types::Context<C>, raw_input: &raw::RawInput) -> Option<event::ControllerEvent<C>> {
-        for m in &context.mappings {
-            if self.check_mapping(m, raw_input) {
-                match m.mapped_type {
-                    Some(types::MappedType::Action) => return Some(self.as_action(&m.mapped, raw_input)),
-                    // TODO
-                    _ => ()
-                }
-            }
-        }
-        None
-    }
-
-    fn process_controller_input(&self, raw_input: &raw::RawInput) -> Option<event::ControllerEvent<C>> {
-        for active_context in &self.active_contexts {
-            match self.process_controller_input_in_context(&self.contexts[active_context.index], raw_input) {
+    fn process_controller_input(&mut self, raw_input: &raw::RawInput) -> Option<event::ControllerEvent<C>> {
+        for ref active_context in &self.active_contexts {
+            match self.contexts[active_context.index].process(raw_input) {
                 Some(v) => return Some(v),
                 None => ()
             }
@@ -177,9 +110,6 @@ impl<C> InputHandler<C>
 
     pub fn process(&mut self) -> Vec<event::Event<C>> {
         let raw_input : Vec<raw::RawInput> = self.sources.iter_mut().flat_map(|s| s.process()).collect();
-        if raw_input.len() > 0 {
-            println!("{:?}", raw_input);
-        }
         let mut window_input : Vec<event::Event<C>> = raw_input.iter()
             .filter_map(|ri| self.process_window_input(&ri))
             .map(|wi| event::Event::Window(wi))
@@ -188,6 +118,9 @@ impl<C> InputHandler<C>
             .filter_map(|ri| { self.process_controller_input(&ri) } )
             .map(|ci| event::Event::Controller(ci))
             .collect();
+        if controller_input.len() > 0 {
+            println!("{:?}", controller_input);
+        }
         window_input.extend(controller_input);
         window_input
     }

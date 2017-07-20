@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
-glfw = "*"
+glutin = "*"
 input = { path = "../.." }
-glfw_input_source = { path = "../../sources/glfw/" }
+glutin_input_source = { path = "../../sources/glutin/" }
 log = "*"

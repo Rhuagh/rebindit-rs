@@ -1,170 +1,167 @@
-
-use std::path::Path;
 use std::str::FromStr;
+use std;
+use std::collections::HashMap;
 
-use amethyst_config::Element;
-
-config! {
-    enum KeyCode {
-        Key1,
-        Key2,
-        Key3,
-        Key4,
-        Key5,
-        Key6,
-        Key7,
-        Key8,
-        Key9,
-        Key0,
-        A,
-        B,
-        C,
-        D,
-        E,
-        F,
-        G,
-        H,
-        I,
-        J,
-        K,
-        L,
-        M,
-        N,
-        O,
-        P,
-        Q,
-        R,
-        S,
-        T,
-        U,
-        V,
-        W,
-        X,
-        Y,
-        Z,
-        Escape,
-        F1,
-        F2,
-        F3,
-        F4,
-        F5,
-        F6,
-        F7,
-        F8,
-        F9,
-        F10,
-        F11,
-        F12,
-        F13,
-        F14,
-        F15,
-        Snapshot,
-        Scroll,
-        Pause,
-        Insert,
-        Home,
-        Delete,
-        End,
-        PageDown,
-        PageUp,
-        Left,
-        Up,
-        Right,
-        Down,
-        Back,
-        Return,
-        Space,
-        Numlock,
-        Numpad0,
-        Numpad1,
-        Numpad2,
-        Numpad3,
-        Numpad4,
-        Numpad5,
-        Numpad6,
-        Numpad7,
-        Numpad8,
-        Numpad9,
-        AbntC1,
-        AbntC2,
-        Add,
-        Apostrophe,
-        Apps,
-        At,
-        Ax,
-        Backslash,
-        Calculator,
-        Capital,
-        Colon,
-        Comma,
-        Convert,
-        Decimal,
-        Divide,
-        Equals,
-        Grave,
-        Kana,
-        Kanji,
-        LAlt,
-        LBracket,
-        LControl,
-        LMenu,
-        LShift,
-        LWin,
-        Mail,
-        MediaSelect,
-        MediaStop,
-        Minus,
-        Multiply,
-        Mute,
-        MyComputer,
-        NavigateForward,
-        NavigateBackward,
-        NextTrack,
-        NoConvert,
-        NumpadComma,
-        NumpadEnter,
-        NumpadEquals,
-        OEM102,
-        Period,
-        PlayPause,
-        Power,
-        PrevTrack,
-        RAlt,
-        RBracket,
-        RControl,
-        RMenu,
-        RShift,
-        RWin,
-        Semicolon,
-        Slash,
-        Sleep,
-        Stop,
-        Subtract,
-        Sysrq,
-        Tab,
-        Underline,
-        Unlabeled,
-        VolumeDown,
-        VolumeUp,
-        Wake,
-        WebBack,
-        WebFavorites,
-        WebForward,
-        WebHome,
-        WebRefresh,
-        WebSearch,
-        WebStop,
-        Yen,
-        None,
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub enum KeyCode {
+    Key1,
+    Key2,
+    Key3,
+    Key4,
+    Key5,
+    Key6,
+    Key7,
+    Key8,
+    Key9,
+    Key0,
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+    Escape,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    F13,
+    F14,
+    F15,
+    Snapshot,
+    Scroll,
+    Pause,
+    Insert,
+    Home,
+    Delete,
+    End,
+    PageDown,
+    PageUp,
+    Left,
+    Up,
+    Right,
+    Down,
+    Back,
+    Return,
+    Space,
+    Numlock,
+    Numpad0,
+    Numpad1,
+    Numpad2,
+    Numpad3,
+    Numpad4,
+    Numpad5,
+    Numpad6,
+    Numpad7,
+    Numpad8,
+    Numpad9,
+    AbntC1,
+    AbntC2,
+    Add,
+    Apostrophe,
+    Apps,
+    At,
+    Ax,
+    Backslash,
+    Calculator,
+    Capital,
+    Colon,
+    Comma,
+    Convert,
+    Decimal,
+    Divide,
+    Equals,
+    Grave,
+    Kana,
+    Kanji,
+    LAlt,
+    LBracket,
+    LControl,
+    LMenu,
+    LShift,
+    LWin,
+    Mail,
+    MediaSelect,
+    MediaStop,
+    Minus,
+    Multiply,
+    Mute,
+    MyComputer,
+    NavigateForward,
+    NavigateBackward,
+    NextTrack,
+    NoConvert,
+    NumpadComma,
+    NumpadEnter,
+    NumpadEquals,
+    OEM102,
+    Period,
+    PlayPause,
+    Power,
+    PrevTrack,
+    RAlt,
+    RBracket,
+    RControl,
+    RMenu,
+    RShift,
+    RWin,
+    Semicolon,
+    Slash,
+    Sleep,
+    Stop,
+    Subtract,
+    Sysrq,
+    Tab,
+    Underline,
+    Unlabeled,
+    VolumeDown,
+    VolumeUp,
+    Wake,
+    WebBack,
+    WebFavorites,
+    WebForward,
+    WebHome,
+    WebRefresh,
+    WebSearch,
+    WebStop,
+    Yen,
+    None,
 }
 
-config! {
-    enum ConfigRawType {
-        Button,
-        Key,
-        Char,
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub enum ConfigRawType {
+    Button,
+    Key,
+    Motion,
+    Char,
 }
 
 impl Into<super::types::RawType> for ConfigRawType {
@@ -172,19 +169,19 @@ impl Into<super::types::RawType> for ConfigRawType {
         match self {
             ConfigRawType::Button => super::types::RawType::Button,
             ConfigRawType::Key => super::types::RawType::Key,
+            ConfigRawType::Motion => super::types::RawType::Motion,
             ConfigRawType::Char => super::types::RawType::Char,
         }
     }
 }
 
-config! {
-    enum ConfigArgsType {
-        KeyCode,
-        Value,
-        Modifiers,
-        Action,
-        CursorPosition,
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub enum ConfigArgsType {
+    KeyCode,
+    Value,
+    Modifiers,
+    Action,
+    CursorPosition,
 }
 
 impl Into<super::types::ActionArgument> for ConfigArgsType {
@@ -199,12 +196,11 @@ impl Into<super::types::ActionArgument> for ConfigArgsType {
     }
 }
 
-config! {
-    enum ConfigMappedType {
-        Action,
-        State,
-        Range,
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub enum ConfigMappedType {
+    Action,
+    State,
+    Range,
 }
 
 impl Into<super::types::MappedType> for ConfigMappedType {
@@ -217,12 +213,11 @@ impl Into<super::types::MappedType> for ConfigMappedType {
     }
 }
 
-config! {
-    enum ConfigInputAction {
-        Press,
-        Release,
-        Repeat,
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub enum ConfigInputAction {
+    Press,
+    Release,
+    Repeat,
 }
 
 impl Into<super::types::RawAction> for ConfigInputAction {
@@ -235,101 +230,128 @@ impl Into<super::types::RawAction> for ConfigInputAction {
     }
 }
 
-config! {
-    struct ConfigRawArgs {
-        pub action : ConfigInputAction = ConfigInputAction::Release,
-        pub keycode : KeyCode = KeyCode::Yen,
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub enum ConfigModifier {
+    ALT,
+    CONTROL,
+    SHIFT,
+    SUPER
+}
+
+impl Into<super::types::Modifier> for ConfigModifier {
+    fn into(self) -> super::types::Modifier {
+        match self {
+            ConfigModifier::ALT => super::types::Modifier::ALT,
+            ConfigModifier::CONTROL => super::types::Modifier::CONTROL,
+            ConfigModifier::SHIFT => super::types::Modifier::SHIFT,
+            ConfigModifier::SUPER => super::types::Modifier::SUPER,
+        }
     }
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct ConfigRawArgs {
+    pub action: Option<ConfigInputAction>,
+    pub keycode: Option<KeyCode>,
+    pub button: Option<u32>,
+    pub modifier: Option<ConfigModifier>
 }
 
 impl Into<super::types::RawArgs> for ConfigRawArgs {
     fn into(self) -> super::types::RawArgs {
         super::types::RawArgs {
-            action : Some(self.action.into()),
-            keycode : match self.keycode {
-                KeyCode::None => None,
-                x => Some(x)
+            action: match self.action {
+                Some(a) => Some(a.into()),
+                None => None
+            },
+            keycode: match self.keycode {
+                Some(k) => Some(k.into()),
+                None => None
+            },
+            button: match self.button {
+                Some(b) => Some(b),
+                None => None
+            },
+            modifier: match self.modifier {
+                Some(m) => Some(m.into()),
+                None => None
             }
         }
     }
 }
 
-config! {
-    struct ConfigRaw {
-        pub raw_type : ConfigRawType = ConfigRawType::Key,
-        pub args : ConfigRawArgs = ConfigRawArgs::default(),
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct ConfigRaw {
+    pub raw_type: ConfigRawType,
+    pub args: ConfigRawArgs,
 }
 
 impl Into<super::types::Raw> for ConfigRaw {
     fn into(self) -> super::types::Raw {
         super::types::Raw {
-            raw_type : self.raw_type.into(),
-            raw_args : self.args.into()
+            raw_type: self.raw_type.into(),
+            raw_args: self.args.into()
         }
     }
 }
 
-config! {
-    struct ConfigMapped {
-        pub constant_id : String = String::default(),
-        pub args : Vec<ConfigArgsType> = Vec::default(),
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct ConfigMapped {
+    pub constant_id: String,
+    pub args: Vec<ConfigArgsType>,
 }
 
-impl<C : FromStr> Into<super::types::Mapped<C>> for ConfigMapped {
+impl<C: FromStr> Into<super::types::Mapped<C>> for ConfigMapped {
     fn into(self) -> super::types::Mapped<C> {
         let action = match self.constant_id.parse::<C>() {
             Ok(x) => Some(x),
             Err(_) => None
         };
         super::types::Mapped {
-            action : action,
-            args : self.args.iter().map(|a| a.clone().into()).collect()
+            action: action,
+            args: self.args.iter().map(|a| a.clone().into()).collect()
         }
     }
 }
 
-config! {
-    struct ConfigMapping {
-        pub raw : ConfigRaw = ConfigRaw::default(),
-        pub mapped : ConfigMapped = ConfigMapped::default(),
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct ConfigMapping {
+    pub raw: ConfigRaw,
+    pub mapped: ConfigMapped,
 }
 
-impl<C : FromStr> Into<super::types::Mapping<C>> for ConfigMapping {
+impl<C: FromStr> Into<super::types::Mapping<C>> for ConfigMapping {
     fn into(self) -> super::types::Mapping<C> {
         super::types::Mapping {
-            raw : self.raw.into(),
-            mapped : self.mapped.into(),
-            mapped_type : None,
+            raw: self.raw.into(),
+            mapped: self.mapped.into(),
+            mapped_type: None,
         }
     }
 }
 
-config! {
-    struct ConfigContext {
-        pub id : String = "".to_string(),
-        pub mappings : Vec<ConfigMapping> = Vec::default(),
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct ConfigContext {
+    pub id: String,
+    pub mappings: Vec<ConfigMapping>,
 }
 
-impl<C : FromStr> Into<super::types::Context<C>> for ConfigContext {
+impl<C: FromStr + std::cmp::Eq + std::hash::Hash> Into<super::types::Context<C>> for ConfigContext {
     fn into(self) -> super::types::Context<C> {
         super::types::Context {
-            id : self.id.clone(),
-            mappings : self.mappings.iter().map(|m| m.clone().into()).collect()
+            id: self.id.clone(),
+            mappings: self.mappings.iter().map(|m| m.clone().into()).collect(),
+            state_storage : HashMap::default()
         }
     }
 }
 
-config! {
-    struct ConfigBindings {
-        pub contexts : Vec<ConfigContext> = Vec::default(),
-    }
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
+pub struct ConfigBindings {
+    pub contexts: Vec<ConfigContext>,
 }
 
-impl<C : FromStr> Into<Vec<super::types::Context<C>>> for ConfigBindings {
+impl<C: FromStr + std::cmp::Eq + std::hash::Hash> Into<Vec<super::types::Context<C>>> for ConfigBindings {
     fn into(self) -> Vec<super::types::Context<C>> {
         self.contexts.iter().map(|c| c.clone().into()).collect()
     }

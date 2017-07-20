@@ -14,7 +14,7 @@ impl Into<super::types::Modifiers> for RawInputModifiers {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RawInputAction {
     Press,
     Release,
@@ -35,7 +35,7 @@ impl Into<super::types::RawAction> for RawInputAction {
 pub enum RawInputEvent {
     Key(super::types::KeyCode, RawInputAction, RawInputModifiers),
     CursorPosition(f64, f64),
-    Move(f64, f64),
+    Motion(f64, f64),
     Button(u32, super::types::WindowPosition, RawInputAction, RawInputModifiers),
     Scroll(f64, f64),
     Char(char),

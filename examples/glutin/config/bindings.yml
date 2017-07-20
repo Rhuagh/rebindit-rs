@@ -12,16 +12,31 @@ contexts:
       - raw :
           raw_type : Key
           args :
-            action: Release
             keycode : W
         mapped :
           constant_id : MoveForward
+          args : []
+      - raw :
+          raw_type : Key
+          args:
+            keycode: Key1
+            action: Release
+            modifier: ALT
+        mapped :
+          constant_id : FireAbility1
+          args:
+            - CursorPosition
+      - raw :
+          raw_type : Motion
+          args : {}
+        mapped :
+          constant_id : RotateDirection
           args : []
   - id : ui
     mappings:
       - raw:
           raw_type : Char
-          args : []
+          args : {}
         mapped:
           constant_id : Text
           args:
