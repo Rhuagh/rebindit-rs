@@ -6,4 +6,4 @@ authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 [dependencies]
 glutin = "*"
 input = { path = "../.." }
-log = "*"
+time = "*"

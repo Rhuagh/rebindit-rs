@@ -1,5 +1,5 @@
 [package]
-name = "glfw_test"
+name = "glutin_test"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 

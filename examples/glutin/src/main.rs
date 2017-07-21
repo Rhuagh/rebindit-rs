@@ -120,6 +120,8 @@ fn main() {
         .with_bindings_file("config/bindings.yml")
         .with_input_source(GlutinInputSource::new(events_loop, (1024.0, 768.0)));
 
+    input_handler.activate_context("default", 1);
+
     let mut running = true;
     while running {
         for event in input_handler.process() {
