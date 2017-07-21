@@ -5,6 +5,6 @@ authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
 glutin = "*"
-input = { path = "../.." }
-glutin_input_source = { path = "../../sources/glutin/" }
+remawin = { path = "../../remawin/" }
+remawin_source_glutin = { path = "../../remawin_source_glutin/" }
 log = "*"

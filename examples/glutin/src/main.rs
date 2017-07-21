@@ -1,13 +1,13 @@
 #[macro_use]
 extern crate log;
 extern crate glutin;
-extern crate input;
-extern crate glutin_input_source;
+extern crate remawin;
+extern crate remawin_source_glutin;
 
-use input::InputHandler;
-use glutin_input_source::GlutinInputSource;
-use input::event::{Event, WindowEvent, ControllerEvent};
-use input::types::{MappedType, ToMappedType};
+use remawin::InputHandler;
+use remawin_source_glutin::GlutinInputSource;
+use remawin::event::{Event, WindowEvent, ControllerEvent};
+use remawin::types::{MappedType, ToMappedType};
 
 use std::str::FromStr;
 use glutin::GlContext;
@@ -76,7 +76,7 @@ pub enum ControllerAction {
 }
 
 impl ToMappedType for ControllerAction {
-    fn to_mapped_type(&self) -> input::types::MappedType {
+    fn to_mapped_type(&self) -> remawin::types::MappedType {
         match self {
             &ControllerAction::UI(ref action) => action.to_mapped_type(),
             &ControllerAction::Combat(ref action) => action.to_mapped_type(),

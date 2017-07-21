@@ -1,9 +1,9 @@
-extern crate input;
+extern crate remawin;
 extern crate glutin;
 extern crate time;
 
-use input::raw::{RawInputSource, RawInput, RawInputEvent, RawInputAction, RawInputModifiers};
-use input::types::{DeviceType, WindowPosition};
+use remawin::raw::{RawInputSource, RawInput, RawInputEvent, RawInputAction, RawInputModifiers};
+use remawin::types::{DeviceType, WindowPosition};
 
 pub struct GlutinInputSource {
     events_loop : glutin::EventsLoop,
@@ -99,10 +99,10 @@ fn map_action(element_state: &glutin::ElementState) -> RawInputAction {
 
 fn map_modifiers(modifiers: &glutin::ModifiersState) -> RawInputModifiers {
     let mut m = RawInputModifiers::empty();
-    m.set(input::raw::SHIFT, modifiers.shift);
-    m.set(input::raw::CONTROL, modifiers.ctrl);
-    m.set(input::raw::ALT, modifiers.alt);
-    m.set(input::raw::SUPER, modifiers.logo);
+    m.set(remawin::raw::SHIFT, modifiers.shift);
+    m.set(remawin::raw::CONTROL, modifiers.ctrl);
+    m.set(remawin::raw::ALT, modifiers.alt);
+    m.set(remawin::raw::SUPER, modifiers.logo);
     m
 }
 
@@ -115,8 +115,8 @@ fn map_mouse_button(button: &glutin::MouseButton) -> u32 {
     }
 }
 
-fn map_keycode(keycode: &Option<glutin::VirtualKeyCode>) -> input::types::KeyCode {
+fn map_keycode(keycode: &Option<glutin::VirtualKeyCode>) -> remawin::types::KeyCode {
     match keycode {
-        _ => input::types::KeyCode::None // TODO
+        _ => remawin::types::KeyCode::None // TODO
     }
 }

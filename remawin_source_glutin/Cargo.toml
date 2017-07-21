@@ -1,9 +1,9 @@
 [package]
-name = "glutin_input_source"
+name = "remawin_source_glutin"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
 glutin = "*"
-input = { path = "../.." }
+remawin = { path = "../remawin/" }
 time = "*"

@@ -5,6 +5,6 @@ authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
 glfw = "*"
-input = { path = "../.." }
-glfw_input_source = { path = "../../sources/glfw/" }
+remawin = { path = "../../remawin/" }
+remawin_source_glfw = { path = "../../remawin_source_glfw/" }
 log = "*"

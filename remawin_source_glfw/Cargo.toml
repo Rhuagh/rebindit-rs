@@ -1,9 +1,9 @@
 [package]
-name = "glfw_input_source"
+name = "remawin_source_glfw"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
 glfw = "*"
-input = { path = "../.." }
+remawin  = { path = "../remawin/" }
 log = "*"

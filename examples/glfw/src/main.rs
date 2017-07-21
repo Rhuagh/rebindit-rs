@@ -1,16 +1,16 @@
 #[macro_use]
 extern crate log;
 extern crate glfw;
-extern crate input;
-extern crate glfw_input_source;
+extern crate remawin;
+extern crate remawin_source_glfw;
 
 use std::sync::mpsc::Receiver;
 use glfw::Context;
 
-use input::InputHandler;
-use glfw_input_source::GlfwInputSource;
-use input::event::{Event, WindowEvent, ControllerEvent};
-use input::types::{MappedType, ToMappedType};
+use remawin::InputHandler;
+use remawin_source_glfw::GlfwInputSource;
+use remawin::event::{Event, WindowEvent, ControllerEvent};
+use remawin::types::{MappedType, ToMappedType};
 
 use std::str::FromStr;
 
@@ -78,7 +78,7 @@ pub enum ControllerAction {
 }
 
 impl ToMappedType for ControllerAction {
-    fn to_mapped_type(&self) -> input::types::MappedType {
+    fn to_mapped_type(&self) -> remawin::types::MappedType {
         match self {
             &ControllerAction::UI(ref action) => action.to_mapped_type(),
             &ControllerAction::Combat(ref action) => action.to_mapped_type(),
