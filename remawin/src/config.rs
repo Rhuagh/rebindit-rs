@@ -95,6 +95,7 @@ pub enum KeyCode {
     Capital,
     Colon,
     Comma,
+    Compose,
     Convert,
     Decimal,
     Divide,

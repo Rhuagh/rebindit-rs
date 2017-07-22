@@ -74,14 +74,14 @@ impl FromStr for GameAction {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ControllerAction {
     UI(UIAction),
-    Combat(GameAction)
+    Game(GameAction)
 }
 
 impl ToMappedType for ControllerAction {
     fn to_mapped_type(&self) -> remawin::types::MappedType {
         match self {
             &ControllerAction::UI(ref action) => action.to_mapped_type(),
-            &ControllerAction::Combat(ref action) => action.to_mapped_type(),
+            &ControllerAction::Game(ref action) => action.to_mapped_type(),
         }
     }
 }
@@ -91,7 +91,7 @@ impl FromStr for ControllerAction {
 
     fn from_str(s: &str) -> Result<ControllerAction, ()> {
         match s.parse::<GameAction>() {
-            Ok(action) => return Ok(ControllerAction::Combat(action)),
+            Ok(action) => return Ok(ControllerAction::Game(action)),
             _ => ()
         };
         match s.parse::<UIAction>() {
