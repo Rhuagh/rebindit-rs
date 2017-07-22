@@ -6,38 +6,26 @@ contexts:
           args :
             action : Release
             keycode : Escape
-        mapped:
-          constant_id : Close
-          args : []
+        mapped: Close
       - raw :
           raw_type : Key
           args :
             keycode : W
-        mapped :
-          constant_id : MoveForward
-          args : []
+        mapped : MoveForward
       - raw :
           raw_type : Key
           args:
             keycode: Key1
             action: Release
             modifier: ALT
-        mapped :
-          constant_id : FireAbility1
-          args:
-            - CursorPosition
+        mapped : FireAbility1
       - raw :
           raw_type : Motion
           args : {}
-        mapped :
-          constant_id : RotateDirection
-          args : []
+        mapped : RotateDirection
   - id : ui
     mappings:
       - raw:
           raw_type : Char
           args : {}
-        mapped:
-          constant_id : Text
-          args:
-            - Value
+        mapped: Text

@@ -1,0 +1,10 @@
+[package]
+name = "complex_action"
+version = "0.1.0"
+authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
+
+[dependencies]
+glutin = "*"
+remawin = { path = "../../remawin/" }
+remawin_source_glutin = { path = "../../remawin_source_glutin/" }
+log = "*"

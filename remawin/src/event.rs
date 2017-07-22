@@ -28,7 +28,8 @@ pub enum Argument {
     Value(char),
     Modifiers(super::types::Modifiers),
     Action(super::types::RawAction),
-    CursorPosition(f64, f64)
+    CursorPosition(f64, f64),
+    ContextId(String),
 }
 
 #[derive(Debug)]

@@ -6,97 +6,52 @@ extern crate remawin_source_glutin;
 
 use remawin::InputHandler;
 use remawin_source_glutin::GlutinInputSource;
-use remawin::event::{Event, WindowEvent, ControllerEvent};
-use remawin::types::{MappedType, ToMappedType};
+use remawin::{Event, WindowEvent, ControllerEvent};
+use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 
 use std::str::FromStr;
 use glutin::GlContext;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum UIAction {
+pub enum Action {
     Close,
-    Text
-}
-
-impl ToMappedType for UIAction {
-    fn to_mapped_type(&self) -> MappedType {
-        match self {
-            &UIAction::Close => MappedType::Action,
-            &UIAction::Text => MappedType::Action,
-        }
-    }
-}
-
-impl FromStr for UIAction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<UIAction, ()> {
-        match s {
-            "Close" => Ok(UIAction::Close),
-            "Text" => Ok(UIAction::Text),
-            _ => Err(())
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum GameAction {
+    Text,
     MoveForward,
     FireAbility1,
     RotateDirection
 }
 
-impl ToMappedType for GameAction {
-    fn to_mapped_type(&self) -> MappedType {
+impl ActionMetadata for Action {
+    fn mapped_type(&self) -> MappedType {
         match self {
-            &GameAction::MoveForward => MappedType::State,
-            &GameAction::FireAbility1 => MappedType::Action,
-            &GameAction::RotateDirection => MappedType::Range,
+            &Action::Close => MappedType::Action,
+            &Action::Text => MappedType::Action,
+            &Action::MoveForward => MappedType::State,
+            &Action::FireAbility1 => MappedType::Action,
+            &Action::RotateDirection => MappedType::Range,
+        }
+    }
+
+    fn args(&self) -> Vec<ActionArgument> {
+        match self {
+            &Action::FireAbility1 => vec![ActionArgument::CursorPosition],
+            _ => Vec::default()
         }
     }
 }
 
-impl FromStr for GameAction {
+impl FromStr for Action {
     type Err = ();
 
-    fn from_str(s: &str) -> Result<GameAction, ()> {
+    fn from_str(s: &str) -> Result<Action, ()> {
         match s {
-            "MoveForward" => Ok(GameAction::MoveForward),
-            "FireAbility1" => Ok(GameAction::FireAbility1),
-            "RotateDirection" => Ok(GameAction::RotateDirection),
+            "Close" => Ok(Action::Close),
+            "Text" => Ok(Action::Text),
+            "MoveForward" => Ok(Action::MoveForward),
+            "FireAbility1" => Ok(Action::FireAbility1),
+            "RotateDirection" => Ok(Action::RotateDirection),
             _ => Err(())
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ControllerAction {
-    UI(UIAction),
-    Game(GameAction)
-}
-
-impl ToMappedType for ControllerAction {
-    fn to_mapped_type(&self) -> remawin::types::MappedType {
-        match self {
-            &ControllerAction::UI(ref action) => action.to_mapped_type(),
-            &ControllerAction::Game(ref action) => action.to_mapped_type(),
-        }
-    }
-}
-
-impl FromStr for ControllerAction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<ControllerAction, ()> {
-        match s.parse::<GameAction>() {
-            Ok(action) => return Ok(ControllerAction::Game(action)),
-            _ => ()
-        };
-        match s.parse::<UIAction>() {
-            Ok(action) => return Ok(ControllerAction::UI(action)),
-            _ => ()
-        };
-        Err(())
     }
 }
 
@@ -116,7 +71,7 @@ fn main() {
 
     debug!("Window initialized");
 
-    let mut input_handler = InputHandler::<ControllerAction>::new()
+    let mut input_handler = InputHandler::<Action>::new()
         .with_bindings_file("config/bindings.yml")
         .with_input_source(GlutinInputSource::new(events_loop, (1024.0, 768.0)));
 
@@ -130,7 +85,7 @@ fn main() {
                     println!("closing!");
                     running = false;
                 },
-                Event::Controller(ControllerEvent::Action(ControllerAction::UI(UIAction::Close), _)) => {
+                Event::Controller(ControllerEvent::Action(Action::Close, _)) => {
                     println!("closing!");
                     running = false;
                 }

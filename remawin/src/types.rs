@@ -65,7 +65,8 @@ pub enum ActionArgument {
     Value,
     Modifiers,
     Action,
-    CursorPosition
+    CursorPosition,
+    ContextId
 }
 
 #[derive(Debug, Clone)]
@@ -75,8 +76,9 @@ pub enum MappedType {
     Range
 }
 
-pub trait ToMappedType {
-    fn to_mapped_type(&self) -> MappedType;
+pub trait ActionMetadata {
+    fn mapped_type(&self) -> MappedType;
+    fn args(&self) -> Vec<ActionArgument>;
 }
 
 #[derive(Debug)]

@@ -20,11 +20,11 @@ impl <C : std::cmp::Eq + std::hash::Hash> types::Context<C> where C : std::fmt::
         for m in &self.mappings {
             if check_mapping(m, raw_input) {
                 match m.mapped_type {
-                    Some(types::MappedType::Action) => return Some(as_action(&m.mapped, raw_input)),
+                    Some(types::MappedType::Action) => return Some(as_action(&m.mapped, raw_input, &self.id)),
                     Some(types::MappedType::State) => {
                         return Some(self.as_state(&m.mapped, raw_input));
                     },
-                    Some(types::MappedType::Range) => return Some(as_range(&m.mapped, raw_input)),
+                    Some(types::MappedType::Range) => return Some(as_range(&m.mapped, raw_input, &self.id)),
                     _ => ()
                 }
             }
@@ -42,7 +42,7 @@ impl <C : std::cmp::Eq + std::hash::Hash> types::Context<C> where C : std::fmt::
         event::ControllerEvent::State(c_action.clone(),
                                       state_action(&r_action.unwrap()),
                                       self.state_duration(&c_action, raw_input),
-                                      arguments(&mapped.args, raw_input))
+                                      arguments(&mapped.args, raw_input, &self.id))
     }
 
     fn state_duration(&self, c_action: &C, raw_input : &raw::RawInput) -> event::StateDuration {
@@ -110,7 +110,7 @@ fn range_diff(raw_input : &raw::RawInput) -> event::RangeDiff {
     }
 }
 
-fn arguments(args : &Vec<types::ActionArgument>, raw_input : &raw::RawInput) -> Vec<event::Argument> {
+fn arguments(args : &Vec<types::ActionArgument>, raw_input : &raw::RawInput, context_id : &str) -> Vec<event::Argument> {
     args.iter().filter_map(|arg| {
         match arg {
             &types::ActionArgument::KeyCode => get_keycode(raw_input),
@@ -118,21 +118,22 @@ fn arguments(args : &Vec<types::ActionArgument>, raw_input : &raw::RawInput) -> 
             &types::ActionArgument::Modifiers => get_modifiers(raw_input),
             &types::ActionArgument::Action => get_action(raw_input),
             &types::ActionArgument::CursorPosition => get_cursor_position(raw_input),
+            &types::ActionArgument::ContextId => Some(event::Argument::ContextId(context_id.to_string())),
         }
     }).collect()
 }
 
-fn as_action<C>(mapped: &types::Mapped<C>, raw_input : &raw::RawInput) -> event::ControllerEvent<C>
+fn as_action<C>(mapped: &types::Mapped<C>, raw_input : &raw::RawInput, context_id : &str) -> event::ControllerEvent<C>
     where C : std::fmt::Debug + std::clone::Clone {
     event::ControllerEvent::Action(mapped.action.clone().unwrap(),
-                                   arguments(&mapped.args, raw_input))
+                                   arguments(&mapped.args, raw_input, context_id))
 }
 
-fn as_range<C>(mapped: &types::Mapped<C>, raw_input: &raw::RawInput) -> event::ControllerEvent<C>
+fn as_range<C>(mapped: &types::Mapped<C>, raw_input: &raw::RawInput, context_id : &str) -> event::ControllerEvent<C>
     where C : std::fmt::Debug + std::clone::Clone {
     event::ControllerEvent::Range(mapped.action.clone().unwrap(),
                                   range_diff(raw_input),
-                                  arguments(&mapped.args, raw_input))
+                                  arguments(&mapped.args, raw_input, context_id))
 }
 
 fn check_mapping<C>(mapping : &types::Mapping<C>, raw_input : &raw::RawInput) -> bool {

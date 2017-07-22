@@ -12,6 +12,8 @@ pub mod types;
 pub mod raw;
 pub mod mapping;
 
+pub use event::*;
+
 pub struct InputHandler<C> where C : std::hash::Hash + std::cmp::Eq + std::str::FromStr {
     sources : Vec<Box<raw::RawInputSource>>,
     contexts : Vec<types::Context<C>>,
@@ -20,7 +22,7 @@ pub struct InputHandler<C> where C : std::hash::Hash + std::cmp::Eq + std::str::
 
 impl<C> InputHandler<C>
     where C : std::hash::Hash + std::cmp::Eq + std::str::FromStr +
-              std::fmt::Debug + std::clone::Clone + types::ToMappedType {
+              std::fmt::Debug + std::clone::Clone + types::ActionMetadata {
     pub fn new() -> InputHandler<C> {
         InputHandler {
             sources : Vec::default(),
@@ -51,14 +53,6 @@ impl<C> InputHandler<C>
         let bindings : config::ConfigBindings = serde_yaml::from_reader(f).expect("Failed parsing Yaml string");
         let mut contexts : Vec<types::Context<C>> = bindings.into();
         for c in &mut contexts {
-            for m in &mut c.mappings {
-                match m.mapped.action {
-                    Some(ref action) => {
-                        m.mapped_type = Some(action.to_mapped_type())
-                    },
-                    None => ()
-                };
-            }
             c.mappings.retain(|m| m.mapped.action.is_some() && m.mapped_type.is_some());
         }
         self.with_contexts(&mut contexts)
@@ -88,17 +82,17 @@ impl<C> InputHandler<C>
         };
     }
 
-    fn process_window_input(&self, raw_input : &raw::RawInput) -> Option<event::WindowEvent> {
+    fn process_window_input(&self, raw_input : &raw::RawInput) -> Option<WindowEvent> {
         match raw_input.event {
-            raw::RawInputEvent::Resize(x, y) => Some(event::WindowEvent::Resize(x, y)),
-            raw::RawInputEvent::Focus(b) => Some(event::WindowEvent::Focus(
-                if b { event::FocusAction::Enter } else { event::FocusAction::Exit })),
-            raw::RawInputEvent::Close => Some(event::WindowEvent::Close),
+            raw::RawInputEvent::Resize(x, y) => Some(WindowEvent::Resize(x, y)),
+            raw::RawInputEvent::Focus(b) => Some(WindowEvent::Focus(
+                if b { FocusAction::Enter } else { FocusAction::Exit })),
+            raw::RawInputEvent::Close => Some(WindowEvent::Close),
             _ => None
         }
     }
 
-    fn process_controller_input(&mut self, raw_input: &raw::RawInput) -> Option<event::ControllerEvent<C>> {
+    fn process_controller_input(&mut self, raw_input: &raw::RawInput) -> Option<ControllerEvent<C>> {
         for ref active_context in &self.active_contexts {
             match self.contexts[active_context.index].process(raw_input) {
                 Some(v) => return Some(v),
@@ -108,20 +102,24 @@ impl<C> InputHandler<C>
         None
     }
 
-    pub fn process(&mut self) -> Vec<event::Event<C>> {
-        let raw_input : Vec<raw::RawInput> = self.sources.iter_mut().flat_map(|s| s.process()).collect();
-        let mut window_input : Vec<event::Event<C>> = raw_input.iter()
-            .filter_map(|ri| self.process_window_input(&ri))
-            .map(|wi| event::Event::Window(wi))
+    pub fn process_raw_input(&mut self, raw_input: &Vec<raw::RawInput>) -> Vec<Event<C>> {
+        let mut window_input : Vec<Event<C>> = raw_input.iter()
+            .filter_map(|ri| self.process_window_input(ri))
+            .map(|wi| Event::Window(wi))
             .collect();
-        let controller_input : Vec<event::Event<C>> = raw_input.iter()
-            .filter_map(|ri| { self.process_controller_input(&ri) } )
-            .map(|ci| event::Event::Controller(ci))
+        let controller_input : Vec<Event<C>> = raw_input.iter()
+            .filter_map(|ri| { self.process_controller_input(ri) } )
+            .map(|ci| Event::Controller(ci))
             .collect();
         if controller_input.len() > 0 {
             println!("{:?}", controller_input);
         }
         window_input.extend(controller_input);
         window_input
+    }
+
+    pub fn process(&mut self) -> Vec<Event<C>> {
+        let raw_input : Vec<raw::RawInput> = self.sources.iter_mut().flat_map(|s| s.process()).collect();
+        self.process_raw_input(&raw_input)
     }
 }

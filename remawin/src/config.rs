@@ -183,6 +183,7 @@ pub enum ConfigArgsType {
     Modifiers,
     Action,
     CursorPosition,
+    ContextId,
 }
 
 impl Into<super::types::ActionArgument> for ConfigArgsType {
@@ -193,6 +194,7 @@ impl Into<super::types::ActionArgument> for ConfigArgsType {
             ConfigArgsType::Modifiers => super::types::ActionArgument::Modifiers,
             ConfigArgsType::Action => super::types::ActionArgument::Action,
             ConfigArgsType::CursorPosition => super::types::ActionArgument::CursorPosition,
+            ConfigArgsType::ContextId => super::types::ActionArgument::ContextId,
         }
     }
 }
@@ -297,36 +299,36 @@ impl Into<super::types::Raw> for ConfigRaw {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
-pub struct ConfigMapped {
-    pub constant_id: String,
-    pub args: Vec<ConfigArgsType>,
-}
-
-impl<C: FromStr> Into<super::types::Mapped<C>> for ConfigMapped {
-    fn into(self) -> super::types::Mapped<C> {
-        let action = match self.constant_id.parse::<C>() {
-            Ok(x) => Some(x),
-            Err(_) => None
-        };
-        super::types::Mapped {
-            action: action,
-            args: self.args.iter().map(|a| a.clone().into()).collect()
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 pub struct ConfigMapping {
     pub raw: ConfigRaw,
-    pub mapped: ConfigMapped,
+    pub mapped: String,
 }
 
-impl<C: FromStr> Into<super::types::Mapping<C>> for ConfigMapping {
+impl<C: FromStr + super::types::ActionMetadata> Into<super::types::Mapping<C>> for ConfigMapping {
     fn into(self) -> super::types::Mapping<C> {
-        super::types::Mapping {
-            raw: self.raw.into(),
-            mapped: self.mapped.into(),
-            mapped_type: None,
+        match self.mapped.parse::<C>() {
+            Ok(action) => {
+                let mapped_type = action.mapped_type();
+                let args = action.args();
+                super::types::Mapping {
+                    raw : self.raw.into(),
+                    mapped_type : Some(mapped_type),
+                    mapped : super::types::Mapped {
+                        action : Some(action),
+                        args : args
+                    }
+                }
+            },
+            Err(_) => {
+                super::types::Mapping {
+                    raw : self.raw.into(),
+                    mapped_type : None,
+                    mapped : super::types::Mapped {
+                        action : None,
+                        args : Vec::default()
+                    }
+                }
+            }
         }
     }
 }
@@ -337,7 +339,8 @@ pub struct ConfigContext {
     pub mappings: Vec<ConfigMapping>,
 }
 
-impl<C: FromStr + std::cmp::Eq + std::hash::Hash> Into<super::types::Context<C>> for ConfigContext {
+impl<C> Into<super::types::Context<C>> for ConfigContext
+    where C : FromStr + std::cmp::Eq + std::hash::Hash + super::types::ActionMetadata {
     fn into(self) -> super::types::Context<C> {
         super::types::Context {
             id: self.id.clone(),
@@ -352,7 +355,8 @@ pub struct ConfigBindings {
     pub contexts: Vec<ConfigContext>,
 }
 
-impl<C: FromStr + std::cmp::Eq + std::hash::Hash> Into<Vec<super::types::Context<C>>> for ConfigBindings {
+impl<C> Into<Vec<super::types::Context<C>>> for ConfigBindings
+    where C : FromStr + std::cmp::Eq + std::hash::Hash + super::types::ActionMetadata {
     fn into(self) -> Vec<super::types::Context<C>> {
         self.contexts.iter().map(|c| c.clone().into()).collect()
     }
