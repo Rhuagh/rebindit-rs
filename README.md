@@ -59,7 +59,6 @@ impl FromStr for Action {
 }
 
 fn main() {
-    debug!("Starting");
     let events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new().with_title("Hello, world!").with_dimensions(1024, 768);
     let context = glutin::ContextBuilder::new().with_vsync(true);
@@ -68,8 +67,6 @@ fn main() {
     unsafe {
         gl_window.make_current().unwrap();
     }
-
-    debug!("Window initialized");
 
     let mut input_handler = InputHandler::<Action>::new()
         .with_bindings_file("config/bindings.yml")

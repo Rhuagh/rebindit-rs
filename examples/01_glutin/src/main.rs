@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate log;
 extern crate glutin;
 extern crate remawin;
 extern crate remawin_source_glutin;
