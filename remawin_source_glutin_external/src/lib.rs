@@ -7,30 +7,32 @@ use remawin::raw::{RawInputSource, RawInput};
 use remawin::types::WindowPosition;
 use remawin_glutin_mapper::{NextData, GlutinEventMapper};
 
-pub struct GlutinInputSource {
-    events_loop : Option<glutin::EventsLoop>,
+pub struct GlutinExternalInputSource {
     last_cursor_position : Option<WindowPosition>,
     current_size : (f64, f64),
+    events : Vec<glutin::Event>
 }
 
-impl GlutinInputSource {
-    pub fn new(events_loop: Option<glutin::EventsLoop>, current_size : (f64, f64)) -> GlutinInputSource {
-        GlutinInputSource {
-            events_loop : events_loop,
-            last_cursor_position : None,
-            current_size: current_size
+impl GlutinExternalInputSource {
+    pub fn new(current_size : (f64, f64)) -> GlutinExternalInputSource {
+        GlutinExternalInputSource {
+            last_cursor_position: None,
+            current_size: current_size,
+            events: Vec::default()
         }
     }
+
+    pub fn push_events(&mut self, events : &mut Vec<glutin::Event>) {
+        self.events.append(events);
+    }
+
 }
 
-impl RawInputSource for GlutinInputSource {
+impl RawInputSource for GlutinExternalInputSource {
 
     fn process(&mut self) -> Vec<RawInput> {
         let mut events = Vec::new();
-        self.events_loop.as_mut().unwrap().poll_events(|event| {
-            events.push(event);
-        });
-
+        events.append(&mut self.events);
         let mut next = NextData {
             size : self.current_size.clone(),
             cursor_position : self.last_cursor_position.clone()

@@ -13,9 +13,10 @@ pub mod raw;
 pub mod mapping;
 
 pub use event::*;
+pub use types::{ActionMetadata, ActionArgument, MappedType};
 
 pub struct InputHandler<C> where C : std::hash::Hash + std::cmp::Eq + std::str::FromStr {
-    sources : Vec<Box<raw::RawInputSource>>,
+    sources : Vec<Box<raw::RawInputSource + Send + Sync>>,
     contexts : Vec<types::Context<C>>,
     active_contexts : Vec<types::ActiveContext>
 }
@@ -32,12 +33,12 @@ impl<C> InputHandler<C>
     }
 
     pub fn with_input_source<S>(mut self, source : S) -> Self
-        where S : raw::RawInputSource + 'static {
+        where S : raw::RawInputSource + Send + Sync + 'static {
         self.sources.push(Box::new(source));
         self
     }
 
-    pub fn get_input_source_mut(&mut self, index: usize) -> &mut Box<raw::RawInputSource> {
+    pub fn get_input_source_mut(&mut self, index: usize) -> &mut Box<raw::RawInputSource + Send + Sync> {
         self.sources.get_mut(index).unwrap()
     }
 

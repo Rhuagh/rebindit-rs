@@ -1,10 +1,9 @@
 [package]
-name = "remawin_source_glutin"
+name = "remawin_glutin_mapper"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
 glutin = "*"
 remawin = { path = "../remawin/" }
-remawin_glutin_mapper = { path = "../remawin_glutin_mapper/" }
 time = "*"
