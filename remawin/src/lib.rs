@@ -37,6 +37,10 @@ impl<C> InputHandler<C>
         self
     }
 
+    pub fn get_input_source_mut<'a>(&'a mut self) -> &'a RawInputSource {
+        self.sources.get_mut(0)
+    }
+
     pub fn with_context(mut self, context : types::Context<C>) -> Self {
         self.contexts.push(context);
         self
