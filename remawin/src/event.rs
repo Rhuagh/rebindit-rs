@@ -18,6 +18,7 @@ pub type RangeDiff = (f64, f64);
 
 #[derive(Debug)]
 pub enum StateAction {
+    Activated,
     Active,
     Deactivated
 }

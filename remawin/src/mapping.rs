@@ -20,11 +20,11 @@ impl <C : std::cmp::Eq + std::hash::Hash> types::Context<C> where C : std::fmt::
         for m in &self.mappings {
             if check_mapping(m, raw_input) {
                 match m.mapped_type {
-                    Some(types::MappedType::Action) => return Some(as_action(&m.mapped, raw_input, &self.id)),
+                    Some(types::MappedType::Action) => return Some(as_action(m, raw_input, &self.id)),
                     Some(types::MappedType::State) => {
-                        return Some(self.as_state(&m.mapped, raw_input));
+                        return Some(self.as_state(m, raw_input));
                     },
-                    Some(types::MappedType::Range) => return Some(as_range(&m.mapped, raw_input, &self.id)),
+                    Some(types::MappedType::Range) => return Some(as_range(m, raw_input, &self.id)),
                     _ => ()
                 }
             }
@@ -32,17 +32,35 @@ impl <C : std::cmp::Eq + std::hash::Hash> types::Context<C> where C : std::fmt::
         None
     }
 
-    fn as_state(&self, mapped: &types::Mapped<C>, raw_input : &raw::RawInput) -> event::ControllerEvent<C> {
+    fn as_state(&self, mapping: &types::Mapping<C>, raw_input : &raw::RawInput) -> event::ControllerEvent<C> {
         let r_action = match raw_input.event {
             raw::RawInputEvent::Key(_, ref action, _) => Some(action.clone()),
             raw::RawInputEvent::Button(_, _, ref action, _) => Some(action.clone()),
             _ => None
         };
-        let c_action = mapped.action.clone().unwrap();
+        let c_action = mapping.action.clone().unwrap();
         event::ControllerEvent::State(c_action.clone(),
-                                      state_action(&r_action.unwrap()),
+                                      self.state_action(&c_action, &r_action.unwrap()),
                                       self.state_duration(&c_action, raw_input),
-                                      arguments(&mapped.args, raw_input, &self.id))
+                                      arguments(&mapping.action_args, raw_input, &self.id))
+    }
+
+    fn state_action(&self, c_action: &C, raw_input : &raw::RawInputAction) -> event::StateAction {
+        match raw_input {
+            &raw::RawInputAction::Press | &raw::RawInputAction::Repeat => {
+                match self.state_storage.get(c_action) {
+                    Some(info) => {
+                        if info.active {
+                            event::StateAction::Active
+                        } else {
+                            event::StateAction::Activated
+                        }
+                    },
+                    None => event::StateAction::Activated
+                }
+            },
+            &raw::RawInputAction::Release => event::StateAction::Deactivated
+        }
     }
 
     fn state_duration(&self, c_action: &C, raw_input : &raw::RawInput) -> event::StateDuration {
@@ -60,7 +78,7 @@ impl <C : std::cmp::Eq + std::hash::Hash> types::Context<C> where C : std::fmt::
 
     fn update_state_info(&mut self, c_action: &C, state_action: &event::StateAction, raw_input : &raw::RawInput) {
         match state_action {
-            &event::StateAction::Active => {
+            &event::StateAction::Active | &event::StateAction::Activated => {
                 let add = match self.state_storage.get_mut(c_action) {
                     Some(ref mut info) => {
                         if !info.active {
@@ -95,14 +113,6 @@ impl <C : std::cmp::Eq + std::hash::Hash> types::Context<C> where C : std::fmt::
 
 }
 
-fn state_action(raw_input : &raw::RawInputAction) -> event::StateAction {
-    match raw_input {
-        &raw::RawInputAction::Press => event::StateAction::Active,
-        &raw::RawInputAction::Repeat => event::StateAction::Active,
-        &raw::RawInputAction::Release => event::StateAction::Deactivated
-    }
-}
-
 fn range_diff(raw_input : &raw::RawInput) -> event::RangeDiff {
     match raw_input.event {
         raw::RawInputEvent::Motion(x, y) => (x, y),
@@ -123,25 +133,25 @@ fn arguments(args : &Vec<types::ActionArgument>, raw_input : &raw::RawInput, con
     }).collect()
 }
 
-fn as_action<C>(mapped: &types::Mapped<C>, raw_input : &raw::RawInput, context_id : &str) -> event::ControllerEvent<C>
+fn as_action<C>(mapping: &types::Mapping<C>, raw_input : &raw::RawInput, context_id : &str) -> event::ControllerEvent<C>
     where C : std::fmt::Debug + std::clone::Clone {
-    event::ControllerEvent::Action(mapped.action.clone().unwrap(),
-                                   arguments(&mapped.args, raw_input, context_id))
+    event::ControllerEvent::Action(mapping.action.clone().unwrap(),
+                                   arguments(&mapping.action_args, raw_input, context_id))
 }
 
-fn as_range<C>(mapped: &types::Mapped<C>, raw_input: &raw::RawInput, context_id : &str) -> event::ControllerEvent<C>
+fn as_range<C>(mapping: &types::Mapping<C>, raw_input: &raw::RawInput, context_id : &str) -> event::ControllerEvent<C>
     where C : std::fmt::Debug + std::clone::Clone {
-    event::ControllerEvent::Range(mapped.action.clone().unwrap(),
+    event::ControllerEvent::Range(mapping.action.clone().unwrap(),
                                   range_diff(raw_input),
-                                  arguments(&mapped.args, raw_input, context_id))
+                                  arguments(&mapping.action_args, raw_input, context_id))
 }
 
 fn check_mapping<C>(mapping : &types::Mapping<C>, raw_input : &raw::RawInput) -> bool {
-    match mapping.raw.raw_type {
-        types::RawType::Button => check_button(&mapping.raw.raw_args, raw_input),
-        types::RawType::Key => check_key(&mapping.raw.raw_args, raw_input),
-        types::RawType::Motion => check_motion(&mapping.raw.raw_args, raw_input),
-        types::RawType::Char => check_char(&mapping.raw.raw_args, raw_input),
+    match mapping.raw_type {
+        types::RawType::Button => check_button(&mapping.raw_args, raw_input),
+        types::RawType::Key => check_key(&mapping.raw_args, raw_input),
+        types::RawType::Motion => check_motion(&mapping.raw_args, raw_input),
+        types::RawType::Char => check_char(&mapping.raw_args, raw_input),
     }
 }
 

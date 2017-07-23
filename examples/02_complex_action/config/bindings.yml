@@ -1,31 +1,26 @@
 contexts:
   - id : default
     mappings:
-      - raw:
-          raw_type : Key
-          args :
-            action : Release
-            keycode : Escape
-        mapped: Close
-      - raw :
-          raw_type : Key
-          args :
-            keycode : W
-        mapped : MoveForward
-      - raw :
-          raw_type : Key
-          args:
-            keycode: Key1
-            action: Release
-            modifier: ALT
-        mapped : FireAbility1
-      - raw :
-          raw_type : Motion
-          args : {}
-        mapped : RotateDirection
+      - raw_type : Key
+        raw_args :
+          action : Release
+          keycode : Escape
+        action: Close
+      - raw_type : Key
+        raw_args :
+          keycode : W
+        action : MoveForward
+      - raw_type : Key
+        raw_args:
+          keycode: Key1
+          action: Release
+          modifier: ALT
+        action : FireAbility1
+      - raw_type : Motion
+        raw_args : {}
+        action : RotateDirection
   - id : ui
     mappings:
-      - raw:
-          raw_type : Char
-          args : {}
-        mapped: Text
+      - raw_type : Char
+        raw_args : {}
+        action : Text

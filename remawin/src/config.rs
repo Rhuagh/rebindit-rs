@@ -284,49 +284,33 @@ impl Into<super::types::RawArgs> for ConfigRawArgs {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
-pub struct ConfigRaw {
-    pub raw_type: ConfigRawType,
-    pub args: ConfigRawArgs,
-}
-
-impl Into<super::types::Raw> for ConfigRaw {
-    fn into(self) -> super::types::Raw {
-        super::types::Raw {
-            raw_type: self.raw_type.into(),
-            raw_args: self.args.into()
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 pub struct ConfigMapping {
-    pub raw: ConfigRaw,
-    pub mapped: String,
+    pub raw_type: ConfigRawType,
+    pub raw_args : ConfigRawArgs,
+    pub action: String,
 }
 
 impl<C: FromStr + super::types::ActionMetadata> Into<super::types::Mapping<C>> for ConfigMapping {
     fn into(self) -> super::types::Mapping<C> {
-        match self.mapped.parse::<C>() {
+        match self.action.parse::<C>() {
             Ok(action) => {
                 let mapped_type = action.mapped_type();
                 let args = action.args();
                 super::types::Mapping {
-                    raw : self.raw.into(),
+                    raw_type : self.raw_type.into(),
                     mapped_type : Some(mapped_type),
-                    mapped : super::types::Mapped {
-                        action : Some(action),
-                        args : args
-                    }
+                    action : Some(action),
+                    action_args : args,
+                    raw_args : self.raw_args.into()
                 }
             },
             Err(_) => {
                 super::types::Mapping {
-                    raw : self.raw.into(),
+                    raw_type : self.raw_type.into(),
+                    raw_args : self.raw_args.into(),
                     mapped_type : None,
-                    mapped : super::types::Mapped {
-                        action : None,
-                        args : Vec::default()
-                    }
+                    action : None,
+                    action_args : Vec::default()
                 }
             }
         }

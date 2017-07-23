@@ -53,7 +53,7 @@ impl<C> InputHandler<C>
         let bindings : config::ConfigBindings = serde_yaml::from_reader(f).expect("Failed parsing Yaml string");
         let mut contexts : Vec<types::Context<C>> = bindings.into();
         for c in &mut contexts {
-            c.mappings.retain(|m| m.mapped.action.is_some() && m.mapped_type.is_some());
+            c.mappings.retain(|m| m.action.is_some() && m.mapped_type.is_some());
         }
         self.with_contexts(&mut contexts)
     }
@@ -119,7 +119,8 @@ impl<C> InputHandler<C>
     }
 
     pub fn process(&mut self) -> Vec<Event<C>> {
-        let raw_input : Vec<raw::RawInput> = self.sources.iter_mut().flat_map(|s| s.process()).collect();
+        let raw_input : Vec<raw::RawInput> = self.sources.iter_mut()
+                                                         .flat_map(|s| s.process()).collect();
         self.process_raw_input(&raw_input)
     }
 }

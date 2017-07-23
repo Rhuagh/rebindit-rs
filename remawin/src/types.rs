@@ -54,12 +54,6 @@ pub struct RawArgs {
 }
 
 #[derive(Debug)]
-pub struct Raw {
-    pub raw_type : RawType,
-    pub raw_args : RawArgs
-}
-
-#[derive(Debug)]
 pub enum ActionArgument {
     KeyCode,
     Value,
@@ -82,16 +76,12 @@ pub trait ActionMetadata {
 }
 
 #[derive(Debug)]
-pub struct Mapped<C> {
-    pub action : Option<C>,
-    pub args : Vec<ActionArgument>
-}
-
-#[derive(Debug)]
 pub struct Mapping<C> {
     pub mapped_type : Option<MappedType>,
-    pub raw : Raw,
-    pub mapped : Mapped<C>
+    pub raw_type : RawType,
+    pub raw_args : RawArgs,
+    pub action : Option<C>,
+    pub action_args : Vec<ActionArgument>,
 }
 
 #[derive(Debug)]
