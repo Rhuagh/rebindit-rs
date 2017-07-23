@@ -326,11 +326,8 @@ pub struct ConfigContext {
 impl<C> Into<super::types::Context<C>> for ConfigContext
     where C : FromStr + std::cmp::Eq + std::hash::Hash + super::types::ActionMetadata {
     fn into(self) -> super::types::Context<C> {
-        super::types::Context {
-            id: self.id.clone(),
-            mappings: self.mappings.iter().map(|m| m.clone().into()).collect(),
-            state_storage : HashMap::default()
-        }
+        super::types::Context::new(self.id.clone(),
+                                   self.mappings.iter().map(|m| m.clone().into()).collect())
     }
 }
 

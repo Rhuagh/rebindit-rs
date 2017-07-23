@@ -84,6 +84,33 @@ pub struct Mapping<C> {
     pub action_args : Vec<ActionArgument>,
 }
 
+impl <C : std::hash::Hash + std::cmp::Eq + ActionMetadata> Mapping<C> {
+    pub fn new(raw_type : RawType,
+               raw_args : RawArgs,
+               action : Option<C>) -> Self {
+        match action {
+            Some(action) => {
+                Mapping {
+                    raw_type : raw_type,
+                    raw_args : raw_args,
+                    mapped_type : action.mapped_type(),
+                    action_args : action.args(),
+                    action : Some(action),
+                }
+            },
+            None => {
+                Mapping {
+                    raw_type : raw_type,
+                    raw_args : raw_args,
+                    action : None,
+                    mapped_type : None,
+                    action_args : Vec::default()
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct StateInfo {
     pub active : bool,
@@ -96,6 +123,26 @@ pub struct Context<C : std::hash::Hash + std::cmp::Eq> {
     pub id : String,
     pub mappings : Vec<Mapping<C>>,
     pub state_storage : HashMap<C, StateInfo>
+}
+
+impl <C : std::hash::Hash + std::cmp::Eq> Context<C> {
+    pub fn new(id: String, mappings : Vec<Mapping<C>>) -> Self {
+        Context {
+            id : id,
+            mappings : mappings,
+            state_storage : HashMap::default()
+        }
+    }
+
+    pub fn with_mapping(self, mapping: Mapping<C>) -> Self {
+        self.mappings.push(mapping);
+        self
+    }
+
+    pub fn with_mappings(self, mappings: Vec<Mapping<C>>) -> Self {
+        self.mappings.append(mappings);
+        self
+    }
 }
 
 #[derive(Debug, Eq, Clone)]
