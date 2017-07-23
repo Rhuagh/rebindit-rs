@@ -5,7 +5,7 @@ extern crate remawin;
 extern crate remawin_source_glutin;
 
 use remawin::InputHandler;
-use remawin_source_glutin::GlutinInputSource;
+use remawin_source_glutin::{GlutinInputSource, InputMode};
 use remawin::{Event, WindowEvent, ControllerEvent};
 use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 
@@ -70,7 +70,9 @@ fn main() {
 
     let mut input_handler = InputHandler::<Action>::new()
         .with_bindings_file("config/bindings.yml")
-        .with_input_source(GlutinInputSource::new(events_loop, (1024.0, 768.0)));
+        .with_input_source(GlutinInputSource::new(InputMode::PollEventsLoop,
+                                                  Some(events_loop)w,
+                                                  (1024.0, 768.0)));
 
     input_handler.activate_context("default", 1);
 

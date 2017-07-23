@@ -5,18 +5,96 @@ extern crate time;
 use remawin::raw::{RawInputSource, RawInput, RawInputEvent, RawInputAction, RawInputModifiers};
 use remawin::types::{DeviceType, WindowPosition};
 
+pub enum InputMode {
+    PollEventsLoop,
+    Manual
+}
+
 pub struct GlutinInputSource {
-    events_loop : glutin::EventsLoop,
+    events_loop : Option<glutin::EventsLoop>,
     last_cursor_position : Option<WindowPosition>,
     current_size : (f64, f64),
+    events : Vec<glutin::Event>,
+    mode : InputMode
+}
+
+struct NextData {
+    pub size : (f64, f64),
+    pub cursor_position : Option<WindowPosition>
 }
 
 impl GlutinInputSource {
-    pub fn new(events_loop: glutin::EventsLoop, current_size : (f64, f64)) -> GlutinInputSource {
+    pub fn new(mode : InputMode, events_loop: Option<glutin::EventsLoop>, current_size : (f64, f64)) -> GlutinInputSource {
         GlutinInputSource {
             events_loop : events_loop,
             last_cursor_position : None,
             current_size: current_size,
+            events : Vec::default(),
+            mode : mode
+        }
+    }
+
+    pub fn push_events(&mut self, events : &mut Vec<glutin::Event>) {
+        self.events.append(events);
+    }
+
+    fn process_event(&mut self,
+                     event : &glutin::Event,
+                     next : &mut NextData) -> Vec<RawInput> {
+        let t = time::precise_time_s();
+        match event {
+            &glutin::Event::WindowEvent { ref event, .. } => {
+                match event {
+                    &glutin::WindowEvent::Closed => {
+                        vec![RawInput::new(t, DeviceType::Window, 0, RawInputEvent::Close)]
+                    },
+                    &glutin::WindowEvent::Resized(x, y) => {
+                        next.size = (x as f64, y as f64);
+                        vec![RawInput::new(t, DeviceType::Window, 0,
+                                      RawInputEvent::Resize(x as u32, y as u32))]
+                    },
+                    &glutin::WindowEvent::Focused(b) => {
+                        vec![RawInput::new(t, DeviceType::Window, 0,
+                                               RawInputEvent::Focus(b))]
+                    },
+                    &glutin::WindowEvent::ReceivedCharacter(ch) => {
+                        vec![RawInput::new(t, DeviceType::Keyboard, 0,
+                                               RawInputEvent::Char(ch))]
+                    },
+                    &glutin::WindowEvent::KeyboardInput { input, .. } => {
+                        vec![RawInput::new(t, DeviceType::Keyboard, 0,
+                                               RawInputEvent::Key(map_keycode(&input.virtual_keycode),
+                                                                  map_action(&input.state),
+                                                                  map_modifiers(&input.modifiers)))]
+                    },
+                    &glutin::WindowEvent::MouseInput { state, button, .. } => {
+                        vec![RawInput::new(t, DeviceType::Mouse, 0,
+                                               RawInputEvent::Button(map_mouse_button(&button),
+                                                                     match next.cursor_position {
+                                                                         Some(position) => position,
+                                                                         None => (0.0, 0.0)
+                                                                     },
+                                                                     map_action(&state),
+                                                                     RawInputModifiers::empty()))]
+                    },
+                    &glutin::WindowEvent::MouseMoved { position : (x, y), .. } => {
+                        let mut raw = Vec::new();
+                        raw.push(RawInput::new(t, DeviceType::Mouse, 0,
+                                               RawInputEvent::CursorPosition(x/next.size.0,
+                                                                             y/next.size.1)));
+                        match next.cursor_position {
+                            Some((px, py)) => raw.push(RawInput::new(t, DeviceType::Mouse, 0,
+                                                                     RawInputEvent::Motion((x-px)/next.size.0,
+                                                                                           (y-py)/next.size.1))),
+                            None => ()
+                        };
+                        next.cursor_position = Some((x, y));
+                        raw
+                    },
+                    _ => Vec::default()
+                }
+            },
+            _ => Vec::default()
         }
     }
 }
@@ -24,67 +102,24 @@ impl GlutinInputSource {
 impl RawInputSource for GlutinInputSource {
 
     fn process(&mut self) -> Vec<RawInput> {
-        let mut raw = vec![];
-        let mut next_size = self.current_size.clone();
-        let mut next_cursor_position = self.last_cursor_position.clone();
-        self.events_loop.poll_events(|event| {
-            let t = time::precise_time_s();
-            match event {
-                glutin::Event::WindowEvent { event, .. } => {
-                    match event {
-                        glutin::WindowEvent::Closed => {
-                            raw.push(RawInput::new(t, DeviceType::Window, 0,
-                                                   RawInputEvent::Close));
-                        },
-                        glutin::WindowEvent::Resized(x, y) => {
-                            raw.push(RawInput::new(t, DeviceType::Window, 0,
-                                                   RawInputEvent::Resize(x as u32, y as u32)));
-                            next_size = (x as f64, y as f64);
-                        },
-                        glutin::WindowEvent::Focused(b) => {
-                            raw.push(RawInput::new(t, DeviceType::Window, 0,
-                                                   RawInputEvent::Focus(b)));
-                        },
-                        glutin::WindowEvent::ReceivedCharacter(ch) => {
-                            raw.push(RawInput::new(t, DeviceType::Keyboard, 0,
-                                                   RawInputEvent::Char(ch)));
-                        },
-                        glutin::WindowEvent::KeyboardInput { input, .. } => {
-                            raw.push(RawInput::new(t, DeviceType::Keyboard, 0,
-                                                   RawInputEvent::Key(map_keycode(&input.virtual_keycode),
-                                                                      map_action(&input.state),
-                                                                      map_modifiers(&input.modifiers))));
-                        },
-                        glutin::WindowEvent::MouseInput { state, button, .. } => {
-                            raw.push(RawInput::new(t, DeviceType::Mouse, 0,
-                            RawInputEvent::Button(map_mouse_button(&button),
-                                                  match next_cursor_position {
-                                                      Some(position) => position,
-                                                      None => (0.0, 0.0)
-                                                  },
-                                                  map_action(&state),
-                                                  RawInputModifiers::empty())));
-                        },
-                        glutin::WindowEvent::MouseMoved { position : (x, y), .. } => {
-                            raw.push(RawInput::new(t, DeviceType::Mouse, 0,
-                                                   RawInputEvent::CursorPosition(x/next_size.0,
-                                                                                 y/next_size.1)));
-                            match next_cursor_position {
-                                Some((px, py)) => raw.push(RawInput::new(t, DeviceType::Mouse, 0,
-                                                                         RawInputEvent::Motion((x-px)/next_size.0,
-                                                                                               (y-py)/next_size.1))),
-                                None => ()
-                            };
-                            next_cursor_position = Some((x, y));
-                        },
-                        _ => ()
-                    };
-                },
-                _ => ()
-            };
-        });
-        self.last_cursor_position = next_cursor_position;
-        self.current_size = next_size;
+        let mut events = Vec::new();
+        match self.mode {
+            InputMode::Manual => events.append(&mut self.events),
+            InputMode::PollEventsLoop => {
+                self.events_loop.as_mut().unwrap().poll_events(|event| {
+                    events.push(event);
+                });
+            }
+        }
+
+        let mut next = NextData {
+            size : self.current_size.clone(),
+            cursor_position : self.last_cursor_position.clone()
+        };
+        let raw = events.iter().flat_map(|e| self.process_event(&e, &mut next)).collect();
+        self.last_cursor_position = next.cursor_position;
+        self.current_size = next.size;
+
         raw
     }
 
