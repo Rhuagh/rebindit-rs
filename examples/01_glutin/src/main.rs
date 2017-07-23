@@ -71,7 +71,7 @@ fn main() {
     let mut input_handler = InputHandler::<Action>::new()
         .with_bindings_file("config/bindings.yml")
         .with_input_source(GlutinInputSource::new(InputMode::PollEventsLoop,
-                                                  Some(events_loop)w,
+                                                  Some(events_loop),
                                                   (1024.0, 768.0)));
 
     input_handler.activate_context("default", 1);
