@@ -15,40 +15,37 @@ pub mod mapping;
 pub use event::*;
 pub use types::{ActionMetadata, ActionArgument, MappedType};
 
-pub struct InputHandler<C> where C : std::hash::Hash + std::cmp::Eq + std::str::FromStr {
-    sources : Vec<Box<raw::RawInputSource + Send + Sync>>,
-    contexts : Vec<types::Context<C>>,
-    active_contexts : Vec<types::ActiveContext>
+use std::collections::HashMap;
+
+pub struct InputReMapper<C, I>
+    where C : std::hash::Hash + std::cmp::Eq + std::str::FromStr + std::clone::Clone,
+          I : std::hash::Hash + std::cmp::Eq + std::str::FromStr +
+              std::clone::Clone + std::fmt::Debug {
+    contexts : HashMap<I, types::Context<C, I>>,
+    active_contexts : Vec<types::ActiveContext<I>>
 }
 
-impl<C> InputHandler<C>
+impl<C, I> InputReMapper<C, I>
     where C : std::hash::Hash + std::cmp::Eq + std::str::FromStr +
-              std::fmt::Debug + std::clone::Clone + types::ActionMetadata {
-    pub fn new() -> InputHandler<C> {
-        InputHandler {
-            sources : Vec::default(),
-            contexts : Vec::default(),
+              std::fmt::Debug + std::clone::Clone + types::ActionMetadata,
+          I : std::hash::Hash + std::cmp::Eq + std::str::FromStr +
+              std::fmt::Debug + std::clone::Clone {
+    pub fn new() -> InputReMapper<C, I> {
+        InputReMapper {
+            contexts : HashMap::default(),
             active_contexts : Vec::default()
         }
     }
 
-    pub fn with_input_source<S>(mut self, source : S) -> Self
-        where S : raw::RawInputSource + Send + Sync + 'static {
-        self.sources.push(Box::new(source));
+    pub fn with_context(mut self, context : types::Context<C, I>) -> Self {
+        self.contexts.insert(context.id.clone().unwrap(), context);
         self
     }
 
-    pub fn get_input_source_mut(&mut self, index: usize) -> &mut Box<raw::RawInputSource + Send + Sync> {
-        self.sources.get_mut(index).unwrap()
-    }
-
-    pub fn with_context(mut self, context : types::Context<C>) -> Self {
-        self.contexts.push(context);
-        self
-    }
-
-    pub fn with_contexts(mut self, contexts : &mut Vec<types::Context<C>>) -> Self {
-        self.contexts.append(contexts);
+    pub fn with_contexts(mut self, contexts : &mut Vec<types::Context<C, I>>) -> Self {
+        for c in contexts {
+            self.contexts.insert(c.id.clone().unwrap(), c.clone());
+        }
         println!("{:?}", self.contexts);
         self
     }
@@ -56,26 +53,27 @@ impl<C> InputHandler<C>
     pub fn with_bindings_file(self, file: &str) -> Self {
         let f = std::fs::File::open(file).expect("Failed opening bindings config file");
         let bindings : config::ConfigBindings = serde_yaml::from_reader(f).expect("Failed parsing Yaml string");
-        let mut contexts : Vec<types::Context<C>> = bindings.into();
+        let mut contexts : Vec<types::Context<C, I>> = bindings.into();
         for c in &mut contexts {
             c.mappings.retain(|m| m.action.is_some() && m.mapped_type.is_some());
         }
+        contexts.retain(|c| c.id.is_some());
         self.with_contexts(&mut contexts)
     }
 
-    pub fn activate_context(&mut self, context_id : &str, priority: u32) {
-        match self.contexts.iter().position(|c| c.id == context_id) {
-            Some(index) => self.active_contexts.push(types::ActiveContext::new(priority, index)),
+    pub fn activate_context(&mut self, context_id : &I, priority: u32) {
+        match self.contexts.get(context_id) {
+            Some(_) => self.active_contexts.push(types::ActiveContext::new(priority, context_id)),
             None => ()
         };
         self.active_contexts.sort();
         println!("{:?}", self.active_contexts);
     }
 
-    pub fn deactivate_context(&mut self, context_id : &str) {
-        match self.contexts.iter().position(|c| c.id == context_id) {
-            Some(index) => {
-                match self.active_contexts.iter().position(|ac| ac.index == index) {
+    pub fn deactivate_context(&mut self, context_id : &I) {
+        match self.contexts.get(context_id) {
+            Some(_) => {
+                match self.active_contexts.iter().position(|ac| ac.context_id == *context_id) {
                     Some(ac_index) => {
                         self.active_contexts.remove(ac_index);
                         ()
@@ -97,9 +95,9 @@ impl<C> InputHandler<C>
         }
     }
 
-    fn process_controller_input(&mut self, raw_input: &raw::RawInput) -> Option<ControllerEvent<C>> {
+    fn process_controller_input(&mut self, raw_input: &raw::RawInput) -> Option<ControllerEvent<C, I>> {
         for ref active_context in &self.active_contexts {
-            match self.contexts[active_context.index].process(raw_input) {
+            match self.contexts.get_mut(&active_context.context_id).unwrap().process(raw_input) {
                 Some(v) => return Some(v),
                 None => ()
             }
@@ -107,12 +105,12 @@ impl<C> InputHandler<C>
         None
     }
 
-    pub fn process_raw_input(&mut self, raw_input: &Vec<raw::RawInput>) -> Vec<Event<C>> {
-        let mut window_input : Vec<Event<C>> = raw_input.iter()
+    pub fn process_raw_input(&mut self, raw_input: &Vec<raw::RawInput>) -> Vec<Event<C, I>> {
+        let mut window_input : Vec<Event<C, I>> = raw_input.iter()
             .filter_map(|ri| self.process_window_input(ri))
             .map(|wi| Event::Window(wi))
             .collect();
-        let controller_input : Vec<Event<C>> = raw_input.iter()
+        let controller_input : Vec<Event<C, I>> = raw_input.iter()
             .filter_map(|ri| { self.process_controller_input(ri) } )
             .map(|ci| Event::Controller(ci))
             .collect();
@@ -121,11 +119,5 @@ impl<C> InputHandler<C>
         }
         window_input.extend(controller_input);
         window_input
-    }
-
-    pub fn process(&mut self) -> Vec<Event<C>> {
-        let raw_input : Vec<raw::RawInput> = self.sources.iter_mut()
-                                                         .flat_map(|s| s.process()).collect();
-        self.process_raw_input(&raw_input)
     }
 }

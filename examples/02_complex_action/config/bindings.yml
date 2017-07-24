@@ -1,5 +1,5 @@
 contexts:
-  - id : default
+  - id : Default
     mappings:
       - raw_type : Key
         raw_args :
@@ -19,7 +19,7 @@ contexts:
       - raw_type : Motion
         raw_args : {}
         action : RotateDirection
-  - id : ui
+  - id : UI
     mappings:
       - raw_type : Char
         raw_args : {}

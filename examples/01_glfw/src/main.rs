@@ -15,6 +15,24 @@ use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ContextId {
+    Default,
+    UI
+}
+
+impl FromStr for ContextId {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<ContextId, ()> {
+        match s {
+            "UI" => Ok(ContextId::UI),
+            "Default" => Ok(ContextId::Default),
+            _ => Err(())
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Action {
     Close,
     Text,
@@ -77,11 +95,11 @@ fn main() {
     let (glfw, mut window, events) = window_init(1024, 768, "Test");
     debug!("Window initialized");
 
-    let mut input_handler = InputHandler::<Action>::new()
+    let mut input_handler = InputHandler::<Action, ContextId>::new()
         .with_bindings_file("config/bindings.yml")
         .with_input_source(GlfwInputSource::new(glfw, events, (1024.0, 768.0)));
 
-    input_handler.activate_context("default", 1);
+    input_handler.activate_context(&ContextId::Default, 1);
     while !window.should_close() {
         for event in input_handler.process() {
             match event {

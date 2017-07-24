@@ -13,6 +13,24 @@ use std::str::FromStr;
 use glutin::GlContext;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ContextId {
+    Default,
+    UI
+}
+
+impl FromStr for ContextId {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<ContextId, ()> {
+        match s {
+            "UI" => Ok(ContextId::UI),
+            "Default" => Ok(ContextId::Default),
+            _ => Err(())
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum UIAction {
     Close,
     Text
@@ -131,11 +149,11 @@ fn main() {
 
     debug!("Window initialized");
 
-    let mut input_handler = InputHandler::<ControllerAction>::new()
+    let mut input_handler = InputHandler::<ControllerAction, ContextId>::new()
         .with_bindings_file("config/bindings.yml")
         .with_input_source(GlutinInputSource::new(events_loop, (1024.0, 768.0)));
 
-    input_handler.activate_context("default", 1);
+    input_handler.activate_context(&ContextId::Default, 1);
 
     let mut running = true;
     while running {

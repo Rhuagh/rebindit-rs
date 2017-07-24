@@ -157,14 +157,14 @@ pub enum KeyCode {
     None,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DeviceType {
     Keyboard,
     Mouse,
     Window
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RawType {
     Button,
     Key,
@@ -172,7 +172,7 @@ pub enum RawType {
     Char
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RawAction {
     Press,
     Release,
@@ -190,7 +190,7 @@ bitflags! {
 
 pub type ButtonId = u32;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Modifier {
     ALT,
     CONTROL,
@@ -198,7 +198,7 @@ pub enum Modifier {
     SUPER
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RawArgs {
     pub action : Option<RawAction>,
     pub keycode : Option<KeyCode>,
@@ -206,7 +206,7 @@ pub struct RawArgs {
     pub modifier : Option<Modifier>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ActionArgument {
     KeyCode,
     Value,
@@ -228,8 +228,8 @@ pub trait ActionMetadata {
     fn args(&self) -> Vec<ActionArgument>;
 }
 
-#[derive(Debug)]
-pub struct Mapping<C> {
+#[derive(Debug, Clone)]
+pub struct Mapping<C : std::clone::Clone> {
     pub mapped_type : Option<MappedType>,
     pub raw_type : RawType,
     pub raw_args : RawArgs,
@@ -237,7 +237,7 @@ pub struct Mapping<C> {
     pub action_args : Vec<ActionArgument>,
 }
 
-impl <C : std::hash::Hash + std::cmp::Eq + ActionMetadata> Mapping<C> {
+impl <C : std::hash::Hash + std::cmp::Eq + ActionMetadata + std::clone::Clone> Mapping<C> {
     pub fn new(raw_type : RawType,
                raw_args : RawArgs,
                action : Option<C>) -> Self {
@@ -264,22 +264,26 @@ impl <C : std::hash::Hash + std::cmp::Eq + ActionMetadata> Mapping<C> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StateInfo {
     pub active : bool,
     pub start_time : f64,
     pub stop_time : f64
 }
 
-#[derive(Debug)]
-pub struct Context<C : std::hash::Hash + std::cmp::Eq> {
-    pub id : String,
+#[derive(Debug, Clone)]
+pub struct Context<C, I>
+    where C : std::hash::Hash + std::cmp::Eq + std::clone::Clone,
+          I : std::hash::Hash + std::cmp::Eq + std::clone::Clone {
+    pub id : Option<I>,
     pub mappings : Vec<Mapping<C>>,
     pub state_storage : HashMap<C, StateInfo>
 }
 
-impl <C : std::hash::Hash + std::cmp::Eq> Context<C> {
-    pub fn new(id: String, mappings : Vec<Mapping<C>>) -> Self {
+impl <C, I> Context<C, I>
+    where C : std::hash::Hash + std::cmp::Eq + std::clone::Clone,
+          I : std::hash::Hash + std::cmp::Eq + std::str::FromStr + std::clone::Clone {
+    pub fn new(id: Option<I>, mappings : Vec<Mapping<C>>) -> Self {
         Context {
             id : id,
             mappings : mappings,
@@ -299,37 +303,48 @@ impl <C : std::hash::Hash + std::cmp::Eq> Context<C> {
 }
 
 #[derive(Debug, Eq, Clone)]
-pub struct ActiveContext {
+pub struct ActiveContext<I>
+    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
     pub priority : u32,
-    pub index : usize
+    pub context_id : I
 }
 
 pub type WindowPosition = (f64, f64);
 pub type WindowSize = (u32, u32);
 
-impl ActiveContext {
-    pub fn new(priority: u32, index: usize) -> ActiveContext {
+impl <I> ActiveContext<I>
+    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+    pub fn new(priority: u32, context_id: &I) -> ActiveContext<I> {
         ActiveContext {
             priority : priority,
-            index : index
+            context_id : context_id.clone()
         }
     }
 }
 
-impl PartialEq for ActiveContext {
-    fn eq(&self, other: &ActiveContext) -> bool {
+impl <I> PartialEq for ActiveContext<I>
+    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq{
+    fn eq(&self, other: &ActiveContext<I>) -> bool {
         self.priority == other.priority
     }
 }
 
-impl Ord for ActiveContext {
-    fn cmp(&self, other: &ActiveContext) -> Ordering {
+impl <I> Ord for ActiveContext<I>
+    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+    fn cmp(&self, other: &ActiveContext<I>) -> Ordering {
         other.priority.cmp(&self.priority)
     }
 }
 
-impl PartialOrd for ActiveContext {
-    fn partial_cmp(&self, other: &ActiveContext) -> Option<Ordering> {
+impl <I> PartialOrd for ActiveContext<I>
+    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+    fn partial_cmp(&self, other: &ActiveContext<I>) -> Option<Ordering> {
         Some(self.cmp(other))
     }
+}
+
+#[derive(Clone)]
+pub struct WindowData {
+    pub size : (f64, f64),
+    pub cursor_position : Option<WindowPosition>
 }

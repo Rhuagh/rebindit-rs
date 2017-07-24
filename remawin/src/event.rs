@@ -24,24 +24,25 @@ pub enum StateAction {
 }
 
 #[derive(Debug)]
-pub enum Argument {
+pub enum Argument<I> where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
     KeyCode(super::types::KeyCode),
     Value(char),
     Modifiers(super::types::Modifiers),
     Action(super::types::RawAction),
     CursorPosition(f64, f64),
-    ContextId(String),
+    ContextId(I),
 }
 
 #[derive(Debug)]
-pub enum ControllerEvent<C : std::fmt::Debug> {
-    Action(C, Vec<Argument>),
-    State(C, StateAction, StateDuration, Vec<Argument>),
-    Range(C, RangeDiff, Vec<Argument>)
+pub enum ControllerEvent<C : std::fmt::Debug,
+                         I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq> {
+    Action(C, Vec<Argument<I>>),
+    State(C, StateAction, StateDuration, Vec<Argument<I>>),
+    Range(C, RangeDiff, Vec<Argument<I>>)
 }
 
 #[derive(Debug)]
-pub enum Event<C : std::fmt::Debug> {
+pub enum Event<C : std::fmt::Debug, I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq> {
     Window(WindowEvent),
-    Controller(ControllerEvent<C>)
+    Controller(ControllerEvent<C, I>)
 }

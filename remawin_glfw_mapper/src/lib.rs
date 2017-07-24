@@ -4,96 +4,106 @@ extern crate log;
 extern crate remawin;
 extern crate glfw;
 
-use glfw::Glfw;
-use remawin::raw::{RawInputSource, RawInput, RawInputEvent, RawInputAction, RawInputModifiers};
-use remawin::types::{DeviceType, WindowPosition};
+use remawin::raw::{RawInput, RawInputEvent, RawInputAction, RawInputModifiers};
+use remawin::types::{DeviceType, WindowData};
+use remawin::InputReMapper;
 
-use std::sync::mpsc::Receiver;
-
-pub struct GlfwInputSource {
-    glfw : Glfw,
-    events : Receiver<(f64, glfw::WindowEvent)>,
-    last_cursor_position : Option<WindowPosition>,
-    current_size : (f64, f64),
+pub struct GlfwEventMapper<C, I>
+    where C: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
+             std::fmt::Debug + std::clone::Clone + remawin::types::ActionMetadata,
+          I: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
+             std::fmt::Debug + std::clone::Clone {
+    window_data : WindowData,
+    input_remapper : InputReMapper<C, I>
 }
 
-impl GlfwInputSource {
-    pub fn new(glfw: Glfw,
-               events: Receiver<(f64, glfw::WindowEvent)>,
-               current_size : (f64, f64)) -> GlfwInputSource {
-        GlfwInputSource {
-            glfw: glfw,
-            events: events,
-            last_cursor_position : None,
-            current_size: current_size
+impl <C, I> GlfwEventMapper<C, I>
+    where C: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
+             std::fmt::Debug + std::clone::Clone + remawin::types::ActionMetadata,
+          I: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
+             std::fmt::Debug + std::clone::Clone {
+    pub fn new(current_size : (f64, f64), input_remapper: InputReMapper<C, I>) -> GlfwEventMapper<C, I> {
+        GlfwEventMapper {
+            window_data : WindowData {
+                size : current_size,
+                cursor_position : None
+            },
+            input_remapper : input_remapper
         }
     }
-}
 
-impl RawInputSource for GlfwInputSource {
-
-    fn process(&mut self) -> Vec<RawInput> {
-        self.glfw.poll_events();
-        let mut raw = vec![];
-        for (time, event) in glfw::flush_messages(&self.events) {
-            match event {
-                glfw::WindowEvent::Key(keycode, _, action, modifiers) => {
-                    raw.push(RawInput::new(time, DeviceType::Keyboard, 0,
-                                           RawInputEvent::Key(map_keycode(keycode),
-                                                              map_action(action),
-                                                              map_modifiers(modifiers))));
-                },
-                glfw::WindowEvent::MouseButton(button, action, modifiers) => {
-                    raw.push(RawInput::new(time, DeviceType::Mouse, 0,
-                                           RawInputEvent::Button(map_mouse_button(button),
-                                                                 match self.last_cursor_position {
-                                                                     Some(position) => position,
-                                                                     None => (0.0, 0.0)
-                                                                 },
-                                                                 map_action(action),
-                                                                 map_modifiers(modifiers))));
-                },
-                glfw::WindowEvent::Scroll(x, y) => {
-                    raw.push(RawInput::new(time, DeviceType::Window, 0,
-                                           RawInputEvent::Scroll(x/self.current_size.0,
-                                                                 y/self.current_size.1)));
-                },
-                glfw::WindowEvent::CursorPos(x, y) => {
-                    raw.push(RawInput::new(time, DeviceType::Mouse, 0,
-                                           RawInputEvent::CursorPosition(x/self.current_size.0,
-                                                                         y/self.current_size.1)));
-                    match self.last_cursor_position {
-                        Some((px, py)) => raw.push(RawInput::new(time, DeviceType::Mouse, 0,
-                            RawInputEvent::Motion((x-px)/self.current_size.0,
-                                                (y-py)/self.current_size.1))),
-                        None => ()
-                    };
-                    self.last_cursor_position = Some((x, y));
-                },
-                glfw::WindowEvent::Close => {
-                    raw.push(RawInput::new(time, DeviceType::Window, 0,
-                                           RawInputEvent::Close));
-                },
-                glfw::WindowEvent::Focus(b) => {
-                    raw.push(RawInput::new(time, DeviceType::Window, 0,
-                                           RawInputEvent::Focus(b)));
-                },
-                glfw::WindowEvent::Char(ch) => {
-                    raw.push(RawInput::new(time, DeviceType::Keyboard, 0,
-                                           RawInputEvent::Char(ch)));
-                },
-                glfw::WindowEvent::Size(x, y) => {
-                    raw.push(RawInput::new(time, DeviceType::Window, 0,
-                                           RawInputEvent::Resize(x as u32, y as u32)));
-                    self.current_size = (x as f64, y as f64);
-                }
-                _ => {
-                    debug!("{:?}", event);
-                }
-            }
-        }
+    pub fn process_events(&mut self, events : &Vec<(f64, glfw::WindowEvent)>) -> Vec<RawInput> {
+        let mut next = self.window_data.clone();
+        let raw = events.iter().flat_map(|e| process_event(e, &mut next)).collect();
+        self.window_data = next;
         raw
     }
+
+    pub fn process(&mut self, events : &Vec<(f64, glfw::WindowEvent)>) -> Vec<remawin::Event<C, I>> {
+        let raw_input = self.process_events(events);
+        self.input_remapper.process_raw_input(&raw_input)
+    }
+
+}
+
+fn process_event(&(time, ref event) : &(f64, glfw::WindowEvent), next : &mut WindowData) -> Vec<RawInput> {
+    let mut raw = Vec::default();
+    match *event {
+        glfw::WindowEvent::Key(keycode, _, action, modifiers) => {
+            raw.push(RawInput::new(time, DeviceType::Keyboard, 0,
+                                   RawInputEvent::Key(map_keycode(keycode),
+                                                      map_action(action),
+                                                      map_modifiers(modifiers))));
+        },
+        glfw::WindowEvent::MouseButton(button, action, modifiers) => {
+            raw.push(RawInput::new(time, DeviceType::Mouse, 0,
+                                   RawInputEvent::Button(map_mouse_button(button),
+                                                         match next.cursor_position {
+                                                             Some(position) => position,
+                                                             None => (0.0, 0.0)
+                                                         },
+                                                         map_action(action),
+                                                         map_modifiers(modifiers))));
+        },
+        glfw::WindowEvent::Scroll(x, y) => {
+            raw.push(RawInput::new(time, DeviceType::Window, 0,
+                                   RawInputEvent::Scroll(x/next.size.0,
+                                                         y/next.size.1)));
+        },
+        glfw::WindowEvent::CursorPos(x, y) => {
+            raw.push(RawInput::new(time, DeviceType::Mouse, 0,
+                                   RawInputEvent::CursorPosition(x/next.size.0,
+                                                                 y/next.size.1)));
+            match next.cursor_position {
+                Some((px, py)) => raw.push(RawInput::new(time, DeviceType::Mouse, 0,
+                                                         RawInputEvent::Motion((x-px)/next.size.0,
+                                                                               (y-py)/next.size.1))),
+                None => ()
+            };
+            next.cursor_position = Some((x, y));
+        },
+        glfw::WindowEvent::Close => {
+            raw.push(RawInput::new(time, DeviceType::Window, 0,
+                                   RawInputEvent::Close));
+        },
+        glfw::WindowEvent::Focus(b) => {
+            raw.push(RawInput::new(time, DeviceType::Window, 0,
+                                   RawInputEvent::Focus(b)));
+        },
+        glfw::WindowEvent::Char(ch) => {
+            raw.push(RawInput::new(time, DeviceType::Keyboard, 0,
+                                   RawInputEvent::Char(ch)));
+        },
+        glfw::WindowEvent::Size(x, y) => {
+            raw.push(RawInput::new(time, DeviceType::Window, 0,
+                                   RawInputEvent::Resize(x as u32, y as u32)));
+            next.size = (x as f64, y as f64);
+        }
+        _ => {
+            debug!("{:?}", event);
+        }
+    };
+    raw
 }
 
 fn map_mouse_button(button : glfw::MouseButton) -> u32 {

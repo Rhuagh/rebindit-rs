@@ -137,7 +137,7 @@ pub struct ConfigMapping {
 }
 
 impl<C> Into<super::types::Mapping<C>> for ConfigMapping
-    where C : FromStr + super::types::ActionMetadata + std::hash::Hash + std::cmp::Eq {
+    where C : FromStr + super::types::ActionMetadata + std::hash::Hash + std::cmp::Eq + std::clone::Clone {
     fn into(self) -> super::types::Mapping<C> {
         super::types::Mapping::new(self.raw_type.into(),
                                    self.raw_args.into(),
@@ -151,10 +151,11 @@ pub struct ConfigContext {
     pub mappings: Vec<ConfigMapping>,
 }
 
-impl<C> Into<super::types::Context<C>> for ConfigContext
-    where C : FromStr + std::cmp::Eq + std::hash::Hash + super::types::ActionMetadata {
-    fn into(self) -> super::types::Context<C> {
-        super::types::Context::new(self.id.clone(),
+impl<C, I> Into<super::types::Context<C, I>> for ConfigContext
+    where C : FromStr + std::cmp::Eq + std::hash::Hash + super::types::ActionMetadata + std::clone::Clone,
+          I : FromStr + std::cmp::Eq + std::hash::Hash + std::clone::Clone {
+    fn into(self) -> super::types::Context<C, I> {
+        super::types::Context::new(self.id.parse::<I>().ok(),
                                    self.mappings.iter().map(|m| m.clone().into()).collect())
     }
 }
@@ -164,9 +165,10 @@ pub struct ConfigBindings {
     pub contexts: Vec<ConfigContext>,
 }
 
-impl<C> Into<Vec<super::types::Context<C>>> for ConfigBindings
-    where C : FromStr + std::cmp::Eq + std::hash::Hash + super::types::ActionMetadata {
-    fn into(self) -> Vec<super::types::Context<C>> {
+impl<C, I> Into<Vec<super::types::Context<C, I>>> for ConfigBindings
+    where C : FromStr + std::cmp::Eq + std::hash::Hash + super::types::ActionMetadata + std::clone::Clone,
+          I : FromStr + std::cmp::Eq + std::hash::Hash + std::clone::Clone {
+    fn into(self) -> Vec<super::types::Context<C, I>> {
         self.contexts.iter().map(|c| c.clone().into()).collect()
     }
 }

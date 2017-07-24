@@ -63,7 +63,3 @@ impl RawInput {
         }
     }
 }
-
-pub trait RawInputSource {
-    fn process(&mut self) -> Vec<RawInput>;
-}

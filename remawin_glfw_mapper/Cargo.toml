@@ -1,5 +1,5 @@
 [package]
-name = "remawin_source_glfw"
+name = "remawin_glfw_mapper"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
