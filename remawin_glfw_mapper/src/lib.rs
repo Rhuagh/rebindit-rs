@@ -22,13 +22,13 @@ impl <C, I> GlfwEventMapper<C, I>
              std::fmt::Debug + std::clone::Clone + remawin::types::ActionMetadata,
           I: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
              std::fmt::Debug + std::clone::Clone {
-    pub fn new(current_size : (f64, f64), input_remapper: InputReMapper<C, I>) -> GlfwEventMapper<C, I> {
+    pub fn new(current_size : (f64, f64)) -> GlfwEventMapper<C, I> {
         GlfwEventMapper {
             window_data : WindowData {
                 size : current_size,
                 cursor_position : None
             },
-            input_remapper : input_remapper
+            input_remapper : InputReMapper::new()
         }
     }
 
@@ -42,6 +42,10 @@ impl <C, I> GlfwEventMapper<C, I>
     pub fn process(&mut self, events : &Vec<(f64, glfw::WindowEvent)>) -> Vec<remawin::Event<C, I>> {
         let raw_input = self.process_events(events);
         self.input_remapper.process_raw_input(&raw_input)
+    }
+
+    pub fn remapper_mut(&mut self) -> &mut InputReMapper<C, I> {
+        &mut self.input_remapper
     }
 
 }

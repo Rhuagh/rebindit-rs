@@ -37,12 +37,12 @@ impl<C, I> InputReMapper<C, I>
         }
     }
 
-    pub fn with_context(mut self, context : types::Context<C, I>) -> Self {
+    pub fn with_context(&mut self, context : types::Context<C, I>) -> &mut Self {
         self.contexts.insert(context.id.clone().unwrap(), context);
         self
     }
 
-    pub fn with_contexts(mut self, contexts : &mut Vec<types::Context<C, I>>) -> Self {
+    pub fn with_contexts(&mut self, contexts : &mut Vec<types::Context<C, I>>) -> &mut Self {
         for c in contexts {
             self.contexts.insert(c.id.clone().unwrap(), c.clone());
         }
@@ -50,7 +50,7 @@ impl<C, I> InputReMapper<C, I>
         self
     }
 
-    pub fn with_bindings_file(self, file: &str) -> Self {
+    pub fn with_bindings_file(&mut self, file: &str) -> &mut Self {
         let f = std::fs::File::open(file).expect("Failed opening bindings config file");
         let bindings : config::ConfigBindings = serde_yaml::from_reader(f).expect("Failed parsing Yaml string");
         let mut contexts : Vec<types::Context<C, I>> = bindings.into();

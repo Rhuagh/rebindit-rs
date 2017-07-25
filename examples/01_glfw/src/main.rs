@@ -2,13 +2,12 @@
 extern crate log;
 extern crate glfw;
 extern crate remawin;
-extern crate remawin_source_glfw;
+extern crate remawin_glfw_mapper;
 
 use std::sync::mpsc::Receiver;
 use glfw::Context;
 
-use remawin::InputHandler;
-use remawin_source_glfw::GlfwInputSource;
+use remawin_glfw_mapper::GlfwEventMapper;
 use remawin::{Event, WindowEvent, ControllerEvent};
 use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 
@@ -90,18 +89,27 @@ fn window_init(width : u32, height: u32, title : &str) -> (glfw::Glfw, glfw::Win
     (glfw, window, events)
 }
 
+fn poll_events(glfw: &mut glfw::Glfw, events : &Receiver<(f64, glfw::WindowEvent)>) -> Vec<(f64, glfw::WindowEvent)> {
+    glfw.poll_events();
+    let mut raw = Vec::default();
+    for (time, event) in glfw::flush_messages(&events) {
+        raw.push((time, event));
+    }
+    raw
+}
+
 fn main() {
     debug!("Starting");
-    let (glfw, mut window, events) = window_init(1024, 768, "Test");
+    let (mut glfw, mut window, events) = window_init(1024, 768, "Test");
     debug!("Window initialized");
 
-    let mut input_handler = InputHandler::<Action, ContextId>::new()
-        .with_bindings_file("config/bindings.yml")
-        .with_input_source(GlfwInputSource::new(glfw, events, (1024.0, 768.0)));
+    let mut event_mapper = GlfwEventMapper::<Action, ContextId>::new((1024.0, 768.0));
+    event_mapper.remapper_mut()
+        .with_bindings_file("../../config/bindings.yml")
+        .activate_context(&ContextId::Default, 1);
 
-    input_handler.activate_context(&ContextId::Default, 1);
     while !window.should_close() {
-        for event in input_handler.process() {
+        for event in event_mapper.process(&mut poll_events(&mut glfw, &events)) {
             match event {
                 Event::Window(WindowEvent::Close) => {
                     println!("closing!");

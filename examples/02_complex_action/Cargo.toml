@@ -6,5 +6,5 @@ authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 [dependencies]
 glutin = "*"
 remawin = { path = "../../remawin/" }
-remawin_source_glutin = { path = "../../remawin_source_glutin/" }
+remawin_glutin_mapper = { path = "../../remawin_glutin_mapper/" }
 log = "*"

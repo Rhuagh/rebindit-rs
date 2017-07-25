@@ -21,13 +21,13 @@ impl <C, I> GlutinEventMapper<C, I>
           I: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
              std::fmt::Debug + std::clone::Clone{
 
-    pub fn new(size : (f64, f64), input_remapper : InputReMapper<C, I>) -> GlutinEventMapper<C, I> {
+    pub fn new(size : (f64, f64)) -> GlutinEventMapper<C, I> {
         GlutinEventMapper {
             frame_data : WindowData {
                 size : size,
                 cursor_position : None
             },
-            input_remapper : input_remapper
+            input_remapper : InputReMapper::new()
         }
     }
 
@@ -41,6 +41,10 @@ impl <C, I> GlutinEventMapper<C, I>
     pub fn process(&mut self, events : &Vec<glutin::Event>) -> Vec<remawin::Event<C, I>> {
         let raw_input = self.process_events(events);
         self.input_remapper.process_raw_input(&raw_input)
+    }
+
+    pub fn remapper_mut(&mut self) -> &mut InputReMapper<C, I> {
+        &mut self.input_remapper
     }
 
 }

@@ -6,5 +6,5 @@ authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 [dependencies]
 glfw = "*"
 remawin = { path = "../../remawin/" }
-remawin_source_glfw = { path = "../../remawin_source_glfw/" }
+remawin_glfw_mapper = { path = "../../remawin_glfw_mapper/" }
 log = "*"
