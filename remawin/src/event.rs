@@ -1,12 +1,12 @@
 use std;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FocusAction {
     Enter,
     Exit
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WindowEvent {
     Resize(u32, u32),
     Focus(FocusAction),
@@ -16,14 +16,14 @@ pub enum WindowEvent {
 pub type StateDuration = f64;
 pub type RangeDiff = (f64, f64);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum StateAction {
     Activated,
     Active,
     Deactivated
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Argument<I> where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
     KeyCode(super::types::KeyCode),
     Value(char),
@@ -33,7 +33,7 @@ pub enum Argument<I> where I : std::fmt::Debug + std::clone::Clone + std::hash::
     ContextId(I),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ControllerEvent<C : std::fmt::Debug,
                          I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq> {
     Action(C, Vec<Argument<I>>),
@@ -41,7 +41,7 @@ pub enum ControllerEvent<C : std::fmt::Debug,
     Range(C, RangeDiff, Vec<Argument<I>>)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Event<C : std::fmt::Debug, I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq> {
     Window(WindowEvent),
     Controller(ControllerEvent<C, I>)

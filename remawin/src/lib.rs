@@ -114,9 +114,6 @@ impl<C, I> InputReMapper<C, I>
             .filter_map(|ri| { self.process_controller_input(ri) } )
             .map(|ci| Event::Controller(ci))
             .collect();
-        if controller_input.len() > 0 {
-            println!("{:?}", controller_input);
-        }
         window_input.extend(controller_input);
         window_input
     }

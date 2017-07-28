@@ -172,7 +172,7 @@ pub enum RawType {
     Char
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RawAction {
     Press,
     Release,
