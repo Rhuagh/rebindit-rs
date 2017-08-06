@@ -7,3 +7,4 @@ authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 glfw = "*"
 remawin  = { path = "../remawin/" }
 log = "*"
+serde = "*"

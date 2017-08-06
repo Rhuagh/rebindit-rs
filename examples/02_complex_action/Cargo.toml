@@ -8,3 +8,5 @@ glutin = "*"
 remawin = { path = "../../remawin/" }
 remawin_glutin_mapper = { path = "../../remawin_glutin_mapper/" }
 log = "*"
+serde = "*"
+serde_derive = "*"

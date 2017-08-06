@@ -1,6 +1,17 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std;
+
+use std::hash::Hash;
+use std::cmp::Eq;
+use std::clone::Clone;
+use std::fmt::Debug;
+use std::io::Read;
+use std::str;
+use std::fs::File;
+
+use serde::de::DeserializeOwned;
+
+use ron;
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 pub enum KeyCode {
@@ -164,7 +175,7 @@ pub enum DeviceType {
     Window
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum RawType {
     Button,
     Key,
@@ -172,7 +183,7 @@ pub enum RawType {
     Char
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum RawAction {
     Press,
     Release,
@@ -190,7 +201,7 @@ bitflags! {
 
 pub type ButtonId = u32;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum Modifier {
     ALT,
     CONTROL,
@@ -198,15 +209,16 @@ pub enum Modifier {
     SUPER
 }
 
-#[derive(Debug, Clone)]
-pub struct RawArgs {
+#[derive(Debug, Clone, Deserialize)]
+pub struct RawArgs<ACTION : Clone> {
     pub action : Option<RawAction>,
     pub keycode : Option<KeyCode>,
     pub button : Option<ButtonId>,
-    pub modifier : Option<Modifier>
+    pub modifier : Option<Modifier>,
+    pub state_active : Option<ACTION>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum ActionArgument {
     KeyCode,
     Value,
@@ -216,7 +228,7 @@ pub enum ActionArgument {
     ContextId
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum MappedType {
     Action,
     State,
@@ -228,39 +240,159 @@ pub trait ActionMetadata {
     fn args(&self) -> Vec<ActionArgument>;
 }
 
-#[derive(Debug, Clone)]
-pub struct Mapping<C : std::clone::Clone> {
-    pub mapped_type : Option<MappedType>,
+#[derive(Debug, Clone, Deserialize)]
+pub struct Mapping<ACTION: Clone> {
     pub raw_type : RawType,
-    pub raw_args : RawArgs,
-    pub action : Option<C>,
+    pub raw_args : RawArgs<ACTION>,
+    pub action : ACTION,
+
+    #[serde(default = "default_mt")]
+    pub mapped_type : Option<MappedType>,
+    #[serde(default = "default_aa")]
     pub action_args : Vec<ActionArgument>,
 }
 
-impl <C : std::hash::Hash + std::cmp::Eq + ActionMetadata + std::clone::Clone> Mapping<C> {
+fn default_mt() -> Option<MappedType> {
+    None
+}
+
+fn default_aa() -> Vec<ActionArgument> {
+    Vec::default()
+}
+
+impl <ACTION: ActionMetadata + Clone> Mapping<ACTION> {
     pub fn new(raw_type : RawType,
-               raw_args : RawArgs,
-               action : Option<C>) -> Self {
-        match action {
-            Some(action) => {
-                Mapping {
-                    raw_type : raw_type,
-                    raw_args : raw_args,
-                    mapped_type : Some(action.mapped_type()),
-                    action_args : action.args(),
-                    action : Some(action),
-                }
-            },
-            None => {
-                Mapping {
-                    raw_type : raw_type,
-                    raw_args : raw_args,
-                    action : None,
-                    mapped_type : None,
-                    action_args : Vec::default()
-                }
-            }
+               raw_args : RawArgs<ACTION>,
+               action: ACTION) -> Self {
+        Mapping {
+            raw_type: raw_type,
+            raw_args: raw_args,
+            mapped_type: Some(action.mapped_type()),
+            action_args: action.args(),
+            action: action,
         }
+    }
+}
+
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Context<ACTION, ID>
+    where ACTION: Hash + Eq + Clone,
+          ID: Clone {
+    pub id : ID,
+    pub mappings : Vec<Mapping<ACTION>>,
+}
+
+impl <ACTION, ID> Context<ACTION, ID>
+    where ACTION: Hash + Eq + Clone,
+          ID: Clone {
+    pub fn new(id: ID, mappings : Vec<Mapping<ACTION>>) -> Self {
+        Context {
+            id : id,
+            mappings : mappings
+        }
+    }
+
+    pub fn with_mapping(mut self, mapping: Mapping<ACTION>) -> Self {
+        self.mappings.push(mapping);
+        self
+    }
+
+    pub fn with_mappings(mut self, mut mappings: Vec<Mapping<ACTION>>) -> Self {
+        self.mappings.append(&mut mappings);
+        self
+    }
+}
+
+pub enum BindingsError {
+    FileNotFound,
+    ReadFailed,
+    Utf8Error,
+    ParseError
+}
+
+pub fn contexts_from_file<ACTION, ID>(file : &str) -> Result<Vec<Context<ACTION, ID>>, BindingsError>
+    where ACTION : Hash + Eq + Clone + DeserializeOwned + ActionMetadata,
+          ID : Clone + DeserializeOwned {
+    let f = match File::open(file) {
+        Ok(f) => f,
+        Err(_) => return Err(BindingsError::FileNotFound)
+    };
+    contexts_from_reader(f)
+}
+
+pub fn contexts_from_reader<R, ACTION, ID>(mut rdr: R) -> Result<Vec<Context<ACTION, ID>>, BindingsError>
+    where R : Read,
+          ACTION : Hash + Eq + Clone + DeserializeOwned + ActionMetadata,
+          ID : Clone + DeserializeOwned {
+    let mut bytes = Vec::new();
+    match rdr.read_to_end(&mut bytes) {
+        Err(_) => return Err(BindingsError::ReadFailed),
+        _ => ()
+    };
+    let s = match str::from_utf8(&bytes) {
+        Ok(s) => s,
+        Err(_) => return Err(BindingsError::Utf8Error)
+    };
+    contexts_from_str(s)
+}
+
+pub fn contexts_from_str<ACTION, ID>(data: &str) -> Result<Vec<Context<ACTION, ID>>, BindingsError>
+    where ACTION : Hash + Eq + Clone + DeserializeOwned + ActionMetadata,
+          ID : Clone + DeserializeOwned {
+    let mut contexts : Vec<Context<ACTION, ID>> =
+        match ron::de::from_str(&data) {
+            Ok(c) => c,
+            Err(_) => return Err(BindingsError::ParseError)
+        };
+    for c in &mut contexts {
+        for m in &mut c.mappings {
+            let action = m.action.clone();
+            m.mapped_type = Some(action.mapped_type());
+            m.action_args = action.args();
+        }
+    }
+    Ok(contexts)
+}
+
+#[derive(Debug, Eq, Clone)]
+pub struct ActiveContext<ID>
+    where ID: Debug + Clone {
+    pub priority : u32,
+    pub context_id : ID
+}
+
+pub type WindowPosition = (f64, f64);
+pub type WindowSize = (u32, u32);
+
+impl <ID> ActiveContext<ID>
+    where ID: Debug + Clone {
+    pub fn new(priority: u32, context_id: &ID) -> ActiveContext<ID> {
+        ActiveContext {
+            priority : priority,
+            context_id : context_id.clone()
+        }
+    }
+}
+
+impl <ID> PartialEq for ActiveContext<ID>
+    where ID: Debug + Clone {
+    fn eq(&self, other: &ActiveContext<ID>) -> bool {
+        self.priority == other.priority
+    }
+}
+
+impl <ID> Ord for ActiveContext<ID>
+    where ID: Debug + Clone + Eq {
+    fn cmp(&self, other: &ActiveContext<ID>) -> Ordering {
+        other.priority.cmp(&self.priority)
+    }
+}
+
+impl <ID> PartialOrd for ActiveContext<ID>
+    where ID: Debug + Clone + Eq {
+    fn partial_cmp(&self, other: &ActiveContext<ID>) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -272,79 +404,37 @@ pub struct StateInfo {
 }
 
 #[derive(Debug, Clone)]
-pub struct Context<C, I>
-    where C : std::hash::Hash + std::cmp::Eq + std::clone::Clone,
-          I : std::hash::Hash + std::cmp::Eq + std::clone::Clone {
-    pub id : Option<I>,
-    pub mappings : Vec<Mapping<C>>,
-    pub state_storage : HashMap<C, StateInfo>
-}
-
-impl <C, I> Context<C, I>
-    where C : std::hash::Hash + std::cmp::Eq + std::clone::Clone,
-          I : std::hash::Hash + std::cmp::Eq + std::str::FromStr + std::clone::Clone {
-    pub fn new(id: Option<I>, mappings : Vec<Mapping<C>>) -> Self {
-        Context {
-            id : id,
-            mappings : mappings,
-            state_storage : HashMap::default()
-        }
-    }
-
-    pub fn with_mapping(mut self, mapping: Mapping<C>) -> Self {
-        self.mappings.push(mapping);
-        self
-    }
-
-    pub fn with_mappings(mut self, mut mappings: Vec<Mapping<C>>) -> Self {
-        self.mappings.append(&mut mappings);
-        self
-    }
-}
-
-#[derive(Debug, Eq, Clone)]
-pub struct ActiveContext<I>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
-    pub priority : u32,
-    pub context_id : I
-}
-
-pub type WindowPosition = (f64, f64);
-pub type WindowSize = (u32, u32);
-
-impl <I> ActiveContext<I>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
-    pub fn new(priority: u32, context_id: &I) -> ActiveContext<I> {
-        ActiveContext {
-            priority : priority,
-            context_id : context_id.clone()
-        }
-    }
-}
-
-impl <I> PartialEq for ActiveContext<I>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq{
-    fn eq(&self, other: &ActiveContext<I>) -> bool {
-        self.priority == other.priority
-    }
-}
-
-impl <I> Ord for ActiveContext<I>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
-    fn cmp(&self, other: &ActiveContext<I>) -> Ordering {
-        other.priority.cmp(&self.priority)
-    }
-}
-
-impl <I> PartialOrd for ActiveContext<I>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
-    fn partial_cmp(&self, other: &ActiveContext<I>) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-#[derive(Clone)]
 pub struct WindowData {
     pub size : (f64, f64),
     pub cursor_position : Option<WindowPosition>
+}
+
+#[derive(Debug)]
+pub struct StateStorage<ACTION>
+    where ACTION : Hash + Eq + Clone {
+    pub states : HashMap<ACTION, StateInfo>,
+}
+
+impl <ACTION> StateStorage<ACTION>
+    where ACTION : Hash + Eq + Clone {
+
+    pub fn new() -> StateStorage<ACTION> {
+        StateStorage {
+            states : HashMap::default()
+        }
+    }
+
+    pub fn get(&self, state: &ACTION) -> Option<StateInfo> {
+        match self.states.get(state) {
+            Some(info) => Some(info.clone()),
+            None => None
+        }
+    }
+
+    pub fn is_active(&self, state: &ACTION) -> bool {
+        match self.states.get(state) {
+            Some(info) => info.active,
+            None => false
+        }
+    }
 }

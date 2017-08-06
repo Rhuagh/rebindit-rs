@@ -1,4 +1,5 @@
-use std;
+use std::clone::Clone;
+use std::fmt::Debug;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FocusAction {
@@ -24,25 +25,25 @@ pub enum StateAction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Argument<I> where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+pub enum Argument<ID> where ID: Debug + Clone {
     KeyCode(super::types::KeyCode),
     Value(char),
     Modifiers(super::types::Modifiers),
     Action(super::types::RawAction),
     CursorPosition(f64, f64),
-    ContextId(I),
+    ContextId(ID),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ControllerEvent<C : std::fmt::Debug,
-                         I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq> {
-    Action(C, Vec<Argument<I>>),
-    State(C, StateAction, StateDuration, Vec<Argument<I>>),
-    Range(C, RangeDiff, Vec<Argument<I>>)
+pub enum ControllerEvent<ACTION: Debug,
+                         ID: Debug + Clone> {
+    Action(ACTION, Vec<Argument<ID>>),
+    State(ACTION, StateAction, StateDuration, Vec<Argument<ID>>),
+    Range(ACTION, RangeDiff, Vec<Argument<ID>>)
 }
 
 #[derive(Debug, Clone)]
-pub enum Event<C : std::fmt::Debug, I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq> {
+pub enum Event<ACTION: Debug, ID: Debug + Clone> {
     Window(WindowEvent),
-    Controller(ControllerEvent<C, I>)
+    Controller(ControllerEvent<ACTION, ID>)
 }

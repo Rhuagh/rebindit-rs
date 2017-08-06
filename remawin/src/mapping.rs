@@ -1,32 +1,40 @@
-use super::raw;
-use super::types;
-use super::event;
-use std;
+use super::raw::{RawInput, RawInputAction, RawInputEvent, SUPER, ALT, CONTROL, SHIFT, RawInputModifiers};
+use super::types::*;
+use super::event::*;
 
-impl <C, I> types::Context<C, I>
-    where C : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::clone::Clone,
-          I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq + std::clone::Clone {
+use std::hash::Hash;
+use std::cmp::Eq;
+use std::clone::Clone;
+use std::fmt::Debug;
 
-    pub fn process(&mut self, raw_input : &raw::RawInput) -> Option<event::ControllerEvent<C, I>> {
-        let event = self.process_internal(raw_input);
+impl <ACTION, ID> Context<ACTION, ID>
+    where ACTION: Hash + Eq + Debug + Clone,
+          ID: Hash + Eq + Debug + Clone {
+
+    pub fn process(&mut self,
+                   raw_input : &RawInput,
+                   state_storage: &mut StateStorage<ACTION>) -> Option<ControllerEvent<ACTION, ID>> {
+        let event = self.process_internal(raw_input, state_storage);
         match &event {
-            &Some(event::ControllerEvent::State(ref c_action, ref state_action, _, _)) => {
-                self.update_state_info(c_action, state_action, raw_input);
+            &Some(ControllerEvent::State(ref c_action, ref state_action, _, _)) => {
+                self.update_state_info(c_action, state_action, raw_input, state_storage);
             },
             _ => ()
         };
         event
     }
 
-    fn process_internal(&self, raw_input : &raw::RawInput) -> Option<event::ControllerEvent<C, I>> {
+    fn process_internal(&self,
+                        raw_input : &RawInput,
+                        state_storage : &mut StateStorage<ACTION>) -> Option<ControllerEvent<ACTION, ID>> {
         for m in &self.mappings {
-            if check_mapping(m, raw_input) {
+            if check_mapping(m, raw_input, state_storage) {
                 match m.mapped_type {
-                    Some(types::MappedType::Action) => return Some(as_action(m, raw_input, &self.id.as_ref().unwrap())),
-                    Some(types::MappedType::State) => {
-                        return Some(self.as_state(m, raw_input));
+                    Some(MappedType::Action) => return Some(as_action(m, raw_input, &self.id)),
+                    Some(MappedType::State) => {
+                        return Some(self.as_state(m, raw_input, state_storage));
                     },
-                    Some(types::MappedType::Range) => return Some(as_range(m, raw_input, &self.id.as_ref().unwrap())),
+                    Some(MappedType::Range) => return Some(as_range(m, raw_input, &self.id)),
                     _ => ()
                 }
             }
@@ -34,39 +42,48 @@ impl <C, I> types::Context<C, I>
         None
     }
 
-    fn as_state(&self, mapping: &types::Mapping<C>, raw_input : &raw::RawInput) -> event::ControllerEvent<C, I> {
+    fn as_state(&self,
+                mapping: &Mapping<ACTION>,
+                raw_input : &RawInput,
+                state_storage: &mut StateStorage<ACTION>) -> ControllerEvent<ACTION, ID> {
         let r_action = match raw_input.event {
-            raw::RawInputEvent::Key(_, ref action, _) => Some(action.clone()),
-            raw::RawInputEvent::Button(_, _, ref action, _) => Some(action.clone()),
+            RawInputEvent::Key(_, ref action, _) => Some(action.clone()),
+            RawInputEvent::Button(_, _, ref action, _) => Some(action.clone()),
             _ => None
         };
-        let c_action = mapping.action.clone().unwrap();
-        event::ControllerEvent::State(c_action.clone(),
-                                      self.state_action(&c_action, &r_action.unwrap()),
-                                      self.state_duration(&c_action, raw_input),
-                                      arguments(&mapping.action_args, raw_input, &self.id.as_ref().unwrap()))
+        let c_action = mapping.action.clone();
+        ControllerEvent::State(c_action.clone(),
+                                      self.state_action(&c_action, &r_action.unwrap(), state_storage),
+                                      self.state_duration(&c_action, raw_input, state_storage),
+                                      arguments(&mapping.action_args, raw_input, &self.id))
     }
 
-    fn state_action(&self, c_action: &C, raw_input : &raw::RawInputAction) -> event::StateAction {
+    fn state_action(&self,
+                    c_action: &ACTION,
+                    raw_input : &RawInputAction,
+                    state_storage: &mut StateStorage<ACTION>) -> StateAction {
         match raw_input {
-            &raw::RawInputAction::Press | &raw::RawInputAction::Repeat => {
-                match self.state_storage.get(c_action) {
+            &RawInputAction::Press | &RawInputAction::Repeat => {
+                match state_storage.states.get(c_action) {
                     Some(info) => {
                         if info.active {
-                            event::StateAction::Active
+                            StateAction::Active
                         } else {
-                            event::StateAction::Activated
+                            StateAction::Activated
                         }
                     },
-                    None => event::StateAction::Activated
+                    None => StateAction::Activated
                 }
             },
-            &raw::RawInputAction::Release => event::StateAction::Deactivated
+            &RawInputAction::Release => StateAction::Deactivated
         }
     }
 
-    fn state_duration(&self, c_action: &C, raw_input : &raw::RawInput) -> event::StateDuration {
-        match self.state_storage.get(c_action) {
+    fn state_duration(&self,
+                      c_action: &ACTION,
+                      raw_input : &RawInput,
+                      state_storage: &mut StateStorage<ACTION>) -> StateDuration {
+        match state_storage.states.get(c_action) {
             Some(info) => {
                 if info.active && info.start_time <= raw_input.time {
                     raw_input.time - info.start_time
@@ -78,10 +95,14 @@ impl <C, I> types::Context<C, I>
         }
     }
 
-    fn update_state_info(&mut self, c_action: &C, state_action: &event::StateAction, raw_input : &raw::RawInput) {
+    fn update_state_info(&mut self,
+                         c_action: &ACTION,
+                         state_action: &StateAction,
+                         raw_input : &RawInput,
+                         state_storage: &mut StateStorage<ACTION>) {
         match state_action {
-            &event::StateAction::Active | &event::StateAction::Activated => {
-                let add = match self.state_storage.get_mut(c_action) {
+            &StateAction::Active | &StateAction::Activated => {
+                let add = match state_storage.states.get_mut(c_action) {
                     Some(ref mut info) => {
                         if !info.active {
                             info.active = true;
@@ -90,19 +111,19 @@ impl <C, I> types::Context<C, I>
                         }
                         None
                     },
-                    None => Some(types::StateInfo {
+                    None => Some(StateInfo {
                         active : true,
                         start_time : raw_input.time,
                         stop_time : 0.0
                     })
                 };
                 match add {
-                    Some(info) => self.state_storage.insert(c_action.clone(), info),
+                    Some(info) => state_storage.states.insert(c_action.clone(), info),
                     None => None
                 };
             },
-            &event::StateAction::Deactivated => {
-                match self.state_storage.get_mut(c_action) {
+            &StateAction::Deactivated => {
+                match state_storage.states.get_mut(c_action) {
                     Some(ref mut info) => {
                         info.active = false;
                         info.stop_time = raw_input.time;
@@ -115,164 +136,190 @@ impl <C, I> types::Context<C, I>
 
 }
 
-fn range_diff(raw_input : &raw::RawInput) -> event::RangeDiff {
+fn range_diff(raw_input : &RawInput) -> RangeDiff {
     match raw_input.event {
-        raw::RawInputEvent::Motion(x, y) => (x, y),
+        RawInputEvent::Motion(x, y) => (x, y),
         _ => (0.0, 0.0)
     }
 }
 
-fn arguments<I>(args : &Vec<types::ActionArgument>, raw_input : &raw::RawInput, context_id : &I) -> Vec<event::Argument<I>>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+fn arguments<ID>(args : &Vec<ActionArgument>,
+                 raw_input : &RawInput,
+                 context_id : &ID) -> Vec<Argument<ID>>
+    where ID: Debug + Clone {
     args.iter().filter_map(|arg| {
         match arg {
-            &types::ActionArgument::KeyCode => get_keycode(raw_input),
-            &types::ActionArgument::Value => get_value(raw_input),
-            &types::ActionArgument::Modifiers => get_modifiers(raw_input),
-            &types::ActionArgument::Action => get_action(raw_input),
-            &types::ActionArgument::CursorPosition => get_cursor_position(raw_input),
-            &types::ActionArgument::ContextId => Some(event::Argument::ContextId(context_id.clone())),
+            &ActionArgument::KeyCode => get_keycode(raw_input),
+            &ActionArgument::Value => get_value(raw_input),
+            &ActionArgument::Modifiers => get_modifiers(raw_input),
+            &ActionArgument::Action => get_action(raw_input),
+            &ActionArgument::CursorPosition => get_cursor_position(raw_input),
+            &ActionArgument::ContextId => Some(Argument::ContextId(context_id.clone())),
         }
     }).collect()
 }
 
-fn as_action<C, I>(mapping: &types::Mapping<C>, raw_input : &raw::RawInput, context_id : &I) -> event::ControllerEvent<C, I>
-    where C : std::fmt::Debug + std::clone::Clone,
-          I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq{
-    event::ControllerEvent::Action(mapping.action.clone().unwrap(),
+fn as_action<ACTION, ID>(mapping: &Mapping<ACTION>,
+                         raw_input : &RawInput,
+                         context_id : &ID) -> ControllerEvent<ACTION, ID>
+    where ACTION: Debug + Clone,
+          ID: Debug + Clone {
+    ControllerEvent::Action(mapping.action.clone(),
                                    arguments(&mapping.action_args, raw_input, context_id))
 }
 
-fn as_range<C, I>(mapping: &types::Mapping<C>, raw_input: &raw::RawInput, context_id : &I) -> event::ControllerEvent<C, I>
-    where C : std::fmt::Debug + std::clone::Clone,
-          I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq{
-    event::ControllerEvent::Range(mapping.action.clone().unwrap(),
+fn as_range<ACTION, ID>(mapping: &Mapping<ACTION>,
+                        raw_input: &RawInput,
+                        context_id : &ID) -> ControllerEvent<ACTION, ID>
+    where ACTION: Debug + Clone,
+          ID: Debug + Clone {
+    ControllerEvent::Range(mapping.action.clone(),
                                   range_diff(raw_input),
                                   arguments(&mapping.action_args, raw_input, context_id))
 }
 
-fn check_mapping<C : std::clone::Clone>(mapping : &types::Mapping<C>, raw_input : &raw::RawInput) -> bool {
+fn check_mapping<ACTION: Clone + Hash + Eq>(mapping : &Mapping<ACTION>,
+                                raw_input : &RawInput,
+                                state_storage : &StateStorage<ACTION>) -> bool {
     match mapping.raw_type {
-        types::RawType::Button => check_button(&mapping.raw_args, raw_input),
-        types::RawType::Key => check_key(&mapping.raw_args, raw_input),
-        types::RawType::Motion => check_motion(&mapping.raw_args, raw_input),
-        types::RawType::Char => check_char(&mapping.raw_args, raw_input),
+        RawType::Button => check_button(&mapping.raw_args, raw_input, state_storage),
+        RawType::Key => check_key(&mapping.raw_args, raw_input, state_storage),
+        RawType::Motion => check_motion(&mapping.raw_args, raw_input, state_storage),
+        RawType::Char => check_char(&mapping.raw_args, raw_input, state_storage),
     }
 }
 
-fn check_button(raw_args : &types::RawArgs, raw_input: &raw::RawInput) -> bool {
+fn check_button<ACTION: Clone + Hash + Eq>(raw_args : &RawArgs<ACTION>,
+                               raw_input: &RawInput,
+                               state_storage : &StateStorage<ACTION>) -> bool {
     match raw_input.event {
-        raw::RawInputEvent::Button(ref button_id, _, ref action, ref modifiers) => {
+        RawInputEvent::Button(ref button_id, _, ref action, ref modifiers) => {
             check_button_id(&raw_args.button, button_id)
                 && check_action(&raw_args.action, action)
                 && check_modifiers(&raw_args.modifier, modifiers)
+                && check_state_active(&raw_args.state_active, state_storage)
         },
         _ => false
     }
 }
 
-fn check_key(raw_args : &types::RawArgs, raw_input: &raw::RawInput) -> bool {
+fn check_key<ACTION: Clone + Hash + Eq>(raw_args : &RawArgs<ACTION>,
+                            raw_input: &RawInput,
+                            state_storage : &StateStorage<ACTION>) -> bool {
     match raw_input.event {
-        raw::RawInputEvent::Key(ref keycode, ref action, ref modifiers) => {
+        RawInputEvent::Key(ref keycode, ref action, ref modifiers) => {
             check_keycode(&raw_args.keycode, keycode)
                 && check_action(&raw_args.action, action)
                 && check_modifiers(&raw_args.modifier, modifiers)
+                && check_state_active(&raw_args.state_active, state_storage)
         },
         _ => false
     }
 }
 
 #[allow(unused_variables)]
-fn check_motion(raw_args : &types::RawArgs, raw_input: &raw::RawInput) -> bool {
+fn check_motion<ACTION: Clone + Hash + Eq>(raw_args : &RawArgs<ACTION>,
+                               raw_input: &RawInput,
+                               state_storage : &StateStorage<ACTION>) -> bool {
     match raw_input.event {
-        raw::RawInputEvent::Motion(_, _) => true,
+        RawInputEvent::Motion(_, _) => check_state_active(&raw_args.state_active, state_storage),
         _ => false
     }
 }
 
 #[allow(unused_variables)]
-fn check_char(raw_args : &types::RawArgs, raw_input: &raw::RawInput) -> bool {
+fn check_char<ACTION: Clone + Hash + Eq>(raw_args : &RawArgs<ACTION>,
+                             raw_input: &RawInput,
+                             state_storage : &StateStorage<ACTION>) -> bool {
     match raw_input.event {
-        raw::RawInputEvent::Char(_) => true,
+        RawInputEvent::Char(_) => check_state_active(&raw_args.state_active, state_storage),
         _ => false
     }
 }
 
-fn check_button_id(config_button: &Option<types::ButtonId>, raw_button_id : &u32) -> bool {
+fn check_state_active<ACTION: Clone + Hash + Eq>(state_active : &Option<ACTION>,
+                                                 state_storage: &StateStorage<ACTION>) -> bool {
+    match state_active {
+        &Some(ref state) => state_storage.is_active(state),
+        &None => true
+    }
+}
+
+fn check_button_id(config_button: &Option<ButtonId>, raw_button_id : &u32) -> bool {
     match config_button {
         &Some(button_id) => button_id == *raw_button_id,
         &None => true
     }
 }
 
-fn check_keycode(config_keycode: &Option<types::KeyCode>, raw_keycode: &types::KeyCode) -> bool {
+fn check_keycode(config_keycode: &Option<KeyCode>, raw_keycode: &KeyCode) -> bool {
     match config_keycode {
         &Some(ref c_keycode) => *c_keycode == *raw_keycode,
         &None => true
     }
 }
 
-fn check_action(config_action: &Option<types::RawAction>, raw_action: &raw::RawInputAction) -> bool {
+fn check_action(config_action: &Option<RawAction>, raw_action: &RawInputAction) -> bool {
     match config_action {
         &Some(ref c_action) => {
             match c_action {
-                &types::RawAction::Press => *raw_action == raw::RawInputAction::Press,
-                &types::RawAction::Repeat => *raw_action == raw::RawInputAction::Repeat,
-                &types::RawAction::Release => *raw_action == raw::RawInputAction::Release,
+                &RawAction::Press => *raw_action == RawInputAction::Press,
+                &RawAction::Repeat => *raw_action == RawInputAction::Repeat,
+                &RawAction::Release => *raw_action == RawInputAction::Release,
             }
         },
         &None => true
     }
 }
 
-fn check_modifiers(config_modifier: &Option<types::Modifier>, raw_modifiers: &raw::RawInputModifiers) -> bool {
+fn check_modifiers(config_modifier: &Option<Modifier>, raw_modifiers: &RawInputModifiers) -> bool {
     match config_modifier {
-        &Some(types::Modifier::SHIFT) => *raw_modifiers == raw::SHIFT,
-        &Some(types::Modifier::ALT) => *raw_modifiers == raw::ALT,
-        &Some(types::Modifier::CONTROL) => *raw_modifiers == raw::CONTROL,
-        &Some(types::Modifier::SUPER) => *raw_modifiers == raw::SUPER,
+        &Some(Modifier::SHIFT) => *raw_modifiers == SHIFT,
+        &Some(Modifier::ALT) => *raw_modifiers == ALT,
+        &Some(Modifier::CONTROL) => *raw_modifiers == CONTROL,
+        &Some(Modifier::SUPER) => *raw_modifiers == SUPER,
         &None => true
     }
 }
 
-fn get_keycode<I>(raw_input : &raw::RawInput) -> Option<event::Argument<I>>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+fn get_keycode<ID>(raw_input : &RawInput) -> Option<Argument<ID>>
+    where ID: Debug + Clone {
     match raw_input.event {
-        raw::RawInputEvent::Key(ref keycode, _, _) => Some(event::Argument::KeyCode(keycode.clone())),
+        RawInputEvent::Key(ref keycode, _, _) => Some(Argument::KeyCode(keycode.clone())),
         _ => None
     }
 }
 
-fn get_modifiers<I>(raw_input: &raw::RawInput) -> Option<event::Argument<I>>
-    where I: std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+fn get_modifiers<ID>(raw_input: &RawInput) -> Option<Argument<ID>>
+    where ID: Debug + Clone {
     match raw_input.event {
-        raw::RawInputEvent::Key(_, _, modifiers) => Some(event::Argument::Modifiers(modifiers.into())),
-        raw::RawInputEvent::Button(_, _, _, modifiers) => Some(event::Argument::Modifiers(modifiers.into())),
+        RawInputEvent::Key(_, _, modifiers) => Some(Argument::Modifiers(modifiers.into())),
+        RawInputEvent::Button(_, _, _, modifiers) => Some(Argument::Modifiers(modifiers.into())),
         _ => None
     }
 }
 
-fn get_value<I>(raw_input: &raw::RawInput) -> Option<event::Argument<I>>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+fn get_value<ID>(raw_input: &RawInput) -> Option<Argument<ID>>
+    where ID: Debug + Clone {
     match raw_input.event {
-        raw::RawInputEvent::Char(ch) => Some(event::Argument::Value(ch)),
+        RawInputEvent::Char(ch) => Some(Argument::Value(ch)),
         _ => None
     }
 }
 
-fn get_action<I>(raw_input: &raw::RawInput) -> Option<event::Argument<I>>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+fn get_action<ID>(raw_input: &RawInput) -> Option<Argument<ID>>
+    where ID: Debug + Clone {
     match raw_input.event {
-        raw::RawInputEvent::Key(_, ref action, _) => Some(event::Argument::Action(action.clone().into())),
-        raw::RawInputEvent::Button(_, _, ref action, _) => Some(event::Argument::Action(action.clone().into())),
+        RawInputEvent::Key(_, ref action, _) => Some(Argument::Action(action.clone().into())),
+        RawInputEvent::Button(_, _, ref action, _) => Some(Argument::Action(action.clone().into())),
         _ => None
     }
 }
 
-fn get_cursor_position<I>(raw_input: &raw::RawInput) -> Option<event::Argument<I>>
-    where I : std::fmt::Debug + std::clone::Clone + std::hash::Hash + std::cmp::Eq {
+fn get_cursor_position<ID>(raw_input: &RawInput) -> Option<Argument<ID>>
+    where ID: Debug + Clone {
     match raw_input.event {
-        raw::RawInputEvent::Button(_, (x, y), _, _) => Some(event::Argument::CursorPosition(x, y)),
+        RawInputEvent::Button(_, (x, y), _, _) => Some(Argument::CursorPosition(x, y)),
         _ => None
     }
 }

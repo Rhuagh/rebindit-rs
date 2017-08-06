@@ -3,26 +3,31 @@ extern crate log;
 
 extern crate remawin;
 extern crate glfw;
+extern crate serde;
 
 use remawin::raw::{RawInput, RawInputEvent, RawInputAction, RawInputModifiers};
-use remawin::types::{DeviceType, WindowData};
+use remawin::types::{DeviceType, WindowData, ActionMetadata, KeyCode};
 use remawin::InputReMapper;
 
-pub struct GlfwEventMapper<C, I>
-    where C: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
-             std::fmt::Debug + std::clone::Clone + remawin::types::ActionMetadata,
-          I: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
-             std::fmt::Debug + std::clone::Clone {
+use serde::de::DeserializeOwned;
+
+use std::hash::Hash;
+use std::cmp::Eq;
+use std::fmt::Debug;
+use std::clone::Clone;
+use std::default::Default;
+
+pub struct GlfwEventMapper<ACTION, ID>
+    where ACTION: Hash + Eq + Clone,
+          ID: Hash + Eq + Clone + Debug {
     window_data : WindowData,
-    input_remapper : InputReMapper<C, I>
+    input_remapper : InputReMapper<ACTION, ID>
 }
 
-impl <C, I> GlfwEventMapper<C, I>
-    where C: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
-             std::fmt::Debug + std::clone::Clone + remawin::types::ActionMetadata,
-          I: std::hash::Hash + std::cmp::Eq + std::str::FromStr +
-             std::fmt::Debug + std::clone::Clone {
-    pub fn new(current_size : (f64, f64)) -> GlfwEventMapper<C, I> {
+impl <ACTION, ID> GlfwEventMapper<ACTION, ID>
+    where ACTION: Hash + Eq + Clone + ActionMetadata + Debug + DeserializeOwned,
+          ID: Hash + Eq + Clone + Debug + DeserializeOwned {
+    pub fn new(current_size : (f64, f64)) -> GlfwEventMapper<ACTION, ID> {
         GlfwEventMapper {
             window_data : WindowData {
                 size : current_size,
@@ -39,13 +44,17 @@ impl <C, I> GlfwEventMapper<C, I>
         raw
     }
 
-    pub fn process(&mut self, events : &Vec<(f64, glfw::WindowEvent)>) -> Vec<remawin::Event<C, I>> {
+    pub fn process(&mut self, events : &Vec<(f64, glfw::WindowEvent)>) -> Vec<remawin::Event<ACTION, ID>> {
         let raw_input = self.process_events(events);
         self.input_remapper.process_raw_input(&raw_input)
     }
 
-    pub fn remapper_mut(&mut self) -> &mut InputReMapper<C, I> {
+    pub fn remapper_mut(&mut self) -> &mut InputReMapper<ACTION, ID> {
         &mut self.input_remapper
+    }
+
+    pub fn remapper(&self) -> &InputReMapper<ACTION, ID> {
+        &self.input_remapper
     }
 
 }
@@ -137,126 +146,126 @@ fn map_action(action: glfw::Action) -> RawInputAction {
 
 fn map_keycode(keycode: glfw::Key) -> remawin::types::KeyCode {
     match keycode {
-        glfw::Key::Space => remawin::types::KeyCode::Space,
-        glfw::Key::Apostrophe => remawin::types::KeyCode::Apostrophe,
-        glfw::Key::Comma => remawin::types::KeyCode::Comma,
-        glfw::Key::Minus => remawin::types::KeyCode::Minus,
-        glfw::Key::Period => remawin::types::KeyCode::Period,
-        glfw::Key::Slash => remawin::types::KeyCode::Slash,
-        glfw::Key::Num0 => remawin::types::KeyCode::Key0,
-        glfw::Key::Num1 => remawin::types::KeyCode::Key1,
-        glfw::Key::Num2 => remawin::types::KeyCode::Key2,
-        glfw::Key::Num3 => remawin::types::KeyCode::Key3,
-        glfw::Key::Num4 => remawin::types::KeyCode::Key4,
-        glfw::Key::Num5 => remawin::types::KeyCode::Key5,
-        glfw::Key::Num6 => remawin::types::KeyCode::Key6,
-        glfw::Key::Num7 => remawin::types::KeyCode::Key7,
-        glfw::Key::Num8 => remawin::types::KeyCode::Key8,
-        glfw::Key::Num9 => remawin::types::KeyCode::Key9,
-        glfw::Key::Semicolon => remawin::types::KeyCode::Semicolon,
-        glfw::Key::Equal => remawin::types::KeyCode::Equals,
-        glfw::Key::A => remawin::types::KeyCode::A,
-        glfw::Key::B => remawin::types::KeyCode::B,
-        glfw::Key::C => remawin::types::KeyCode::C,
-        glfw::Key::D => remawin::types::KeyCode::D,
-        glfw::Key::E => remawin::types::KeyCode::E,
-        glfw::Key::F => remawin::types::KeyCode::F,
-        glfw::Key::G => remawin::types::KeyCode::G,
-        glfw::Key::H => remawin::types::KeyCode::H,
-        glfw::Key::I => remawin::types::KeyCode::I,
-        glfw::Key::J => remawin::types::KeyCode::J,
-        glfw::Key::K => remawin::types::KeyCode::K,
-        glfw::Key::L => remawin::types::KeyCode::L,
-        glfw::Key::M => remawin::types::KeyCode::M,
-        glfw::Key::N => remawin::types::KeyCode::N,
-        glfw::Key::O => remawin::types::KeyCode::O,
-        glfw::Key::P => remawin::types::KeyCode::P,
-        glfw::Key::Q => remawin::types::KeyCode::Q,
-        glfw::Key::R => remawin::types::KeyCode::R,
-        glfw::Key::S => remawin::types::KeyCode::S,
-        glfw::Key::T => remawin::types::KeyCode::T,
-        glfw::Key::U => remawin::types::KeyCode::U,
-        glfw::Key::V => remawin::types::KeyCode::V,
-        glfw::Key::W => remawin::types::KeyCode::W,
-        glfw::Key::X => remawin::types::KeyCode::X,
-        glfw::Key::Y => remawin::types::KeyCode::Y,
-        glfw::Key::Z => remawin::types::KeyCode::Z,
-        glfw::Key::LeftBracket => remawin::types::KeyCode::LBracket,
-        glfw::Key::Backslash => remawin::types::KeyCode::Backslash,
-        glfw::Key::RightBracket => remawin::types::KeyCode::RBracket,
-        glfw::Key::GraveAccent => remawin::types::KeyCode::Grave,
-        glfw::Key::World1 => remawin::types::KeyCode::None,
-        glfw::Key::World2 => remawin::types::KeyCode::None,
-        glfw::Key::Escape => remawin::types::KeyCode::Escape,
-        glfw::Key::Enter => remawin::types::KeyCode::Return,
-        glfw::Key::Tab => remawin::types::KeyCode::Tab,
-        glfw::Key::Backspace => remawin::types::KeyCode::Back,
-        glfw::Key::Insert => remawin::types::KeyCode::Insert,
-        glfw::Key::Delete => remawin::types::KeyCode::Delete,
-        glfw::Key::Right => remawin::types::KeyCode::Right,
-        glfw::Key::Left => remawin::types::KeyCode::Left,
-        glfw::Key::Down => remawin::types::KeyCode::Down,
-        glfw::Key::Up => remawin::types::KeyCode::Up,
-        glfw::Key::PageUp => remawin::types::KeyCode::PageUp,
-        glfw::Key::PageDown => remawin::types::KeyCode::PageDown,
-        glfw::Key::Home => remawin::types::KeyCode::Home,
-        glfw::Key::End => remawin::types::KeyCode::End,
-        glfw::Key::CapsLock => remawin::types::KeyCode::Capital,
-        glfw::Key::ScrollLock => remawin::types::KeyCode::Scroll,
-        glfw::Key::NumLock => remawin::types::KeyCode::Numlock,
-        glfw::Key::PrintScreen => remawin::types::KeyCode::Snapshot,
-        glfw::Key::Pause => remawin::types::KeyCode::Pause,
-        glfw::Key::F1 => remawin::types::KeyCode::F1,
-        glfw::Key::F2 => remawin::types::KeyCode::F2,
-        glfw::Key::F3 => remawin::types::KeyCode::F3,
-        glfw::Key::F4 => remawin::types::KeyCode::F4,
-        glfw::Key::F5 => remawin::types::KeyCode::F5,
-        glfw::Key::F6 => remawin::types::KeyCode::F6,
-        glfw::Key::F7 => remawin::types::KeyCode::F7,
-        glfw::Key::F8 => remawin::types::KeyCode::F8,
-        glfw::Key::F9 => remawin::types::KeyCode::F9,
-        glfw::Key::F10 => remawin::types::KeyCode::F10,
-        glfw::Key::F11 => remawin::types::KeyCode::F11,
-        glfw::Key::F12 => remawin::types::KeyCode::F12,
-        glfw::Key::F13 => remawin::types::KeyCode::F13,
-        glfw::Key::F14 => remawin::types::KeyCode::F14,
-        glfw::Key::F15 => remawin::types::KeyCode::F15,
-        glfw::Key::F16 => remawin::types::KeyCode::None,
-        glfw::Key::F17 => remawin::types::KeyCode::None,
-        glfw::Key::F18 => remawin::types::KeyCode::None,
-        glfw::Key::F19 => remawin::types::KeyCode::None,
-        glfw::Key::F20 => remawin::types::KeyCode::None,
-        glfw::Key::F21 => remawin::types::KeyCode::None,
-        glfw::Key::F22 => remawin::types::KeyCode::None,
-        glfw::Key::F23 => remawin::types::KeyCode::None,
-        glfw::Key::F24 => remawin::types::KeyCode::None,
-        glfw::Key::F25 => remawin::types::KeyCode::None,
-        glfw::Key::Kp0 => remawin::types::KeyCode::Numpad0,
-        glfw::Key::Kp1 => remawin::types::KeyCode::Numpad1,
-        glfw::Key::Kp2 => remawin::types::KeyCode::Numpad2,
-        glfw::Key::Kp3 => remawin::types::KeyCode::Numpad3,
-        glfw::Key::Kp4 => remawin::types::KeyCode::Numpad4,
-        glfw::Key::Kp5 => remawin::types::KeyCode::Numpad5,
-        glfw::Key::Kp6 => remawin::types::KeyCode::Numpad6,
-        glfw::Key::Kp7 => remawin::types::KeyCode::Numpad7,
-        glfw::Key::Kp8 => remawin::types::KeyCode::Numpad8,
-        glfw::Key::Kp9 => remawin::types::KeyCode::Numpad9,
-        glfw::Key::KpDecimal => remawin::types::KeyCode::Decimal,
-        glfw::Key::KpDivide => remawin::types::KeyCode::Divide,
-        glfw::Key::KpMultiply => remawin::types::KeyCode::Multiply,
-        glfw::Key::KpSubtract => remawin::types::KeyCode::Subtract,
-        glfw::Key::KpAdd => remawin::types::KeyCode::Add,
-        glfw::Key::KpEnter => remawin::types::KeyCode::NumpadEnter,
-        glfw::Key::KpEqual => remawin::types::KeyCode::NumpadEquals,
-        glfw::Key::LeftShift => remawin::types::KeyCode::LShift,
-        glfw::Key::LeftControl => remawin::types::KeyCode::LControl,
-        glfw::Key::LeftAlt => remawin::types::KeyCode::LAlt,
-        glfw::Key::LeftSuper => remawin::types::KeyCode::LWin,
-        glfw::Key::RightShift => remawin::types::KeyCode::RShift,
-        glfw::Key::RightControl => remawin::types::KeyCode::RControl,
-        glfw::Key::RightAlt => remawin::types::KeyCode::RAlt,
-        glfw::Key::RightSuper => remawin::types::KeyCode::RWin,
-        glfw::Key::Menu => remawin::types::KeyCode::LMenu,
-        glfw::Key::Unknown => remawin::types::KeyCode::None,
+        glfw::Key::Space => KeyCode::Space,
+        glfw::Key::Apostrophe => KeyCode::Apostrophe,
+        glfw::Key::Comma => KeyCode::Comma,
+        glfw::Key::Minus => KeyCode::Minus,
+        glfw::Key::Period => KeyCode::Period,
+        glfw::Key::Slash => KeyCode::Slash,
+        glfw::Key::Num0 => KeyCode::Key0,
+        glfw::Key::Num1 => KeyCode::Key1,
+        glfw::Key::Num2 => KeyCode::Key2,
+        glfw::Key::Num3 => KeyCode::Key3,
+        glfw::Key::Num4 => KeyCode::Key4,
+        glfw::Key::Num5 => KeyCode::Key5,
+        glfw::Key::Num6 => KeyCode::Key6,
+        glfw::Key::Num7 => KeyCode::Key7,
+        glfw::Key::Num8 => KeyCode::Key8,
+        glfw::Key::Num9 => KeyCode::Key9,
+        glfw::Key::Semicolon => KeyCode::Semicolon,
+        glfw::Key::Equal => KeyCode::Equals,
+        glfw::Key::A => KeyCode::A,
+        glfw::Key::B => KeyCode::B,
+        glfw::Key::C => KeyCode::C,
+        glfw::Key::D => KeyCode::D,
+        glfw::Key::E => KeyCode::E,
+        glfw::Key::F => KeyCode::F,
+        glfw::Key::G => KeyCode::G,
+        glfw::Key::H => KeyCode::H,
+        glfw::Key::I => KeyCode::I,
+        glfw::Key::J => KeyCode::J,
+        glfw::Key::K => KeyCode::K,
+        glfw::Key::L => KeyCode::L,
+        glfw::Key::M => KeyCode::M,
+        glfw::Key::N => KeyCode::N,
+        glfw::Key::O => KeyCode::O,
+        glfw::Key::P => KeyCode::P,
+        glfw::Key::Q => KeyCode::Q,
+        glfw::Key::R => KeyCode::R,
+        glfw::Key::S => KeyCode::S,
+        glfw::Key::T => KeyCode::T,
+        glfw::Key::U => KeyCode::U,
+        glfw::Key::V => KeyCode::V,
+        glfw::Key::W => KeyCode::W,
+        glfw::Key::X => KeyCode::X,
+        glfw::Key::Y => KeyCode::Y,
+        glfw::Key::Z => KeyCode::Z,
+        glfw::Key::LeftBracket => KeyCode::LBracket,
+        glfw::Key::Backslash => KeyCode::Backslash,
+        glfw::Key::RightBracket => KeyCode::RBracket,
+        glfw::Key::GraveAccent => KeyCode::Grave,
+        glfw::Key::World1 => KeyCode::None,
+        glfw::Key::World2 => KeyCode::None,
+        glfw::Key::Escape => KeyCode::Escape,
+        glfw::Key::Enter => KeyCode::Return,
+        glfw::Key::Tab => KeyCode::Tab,
+        glfw::Key::Backspace => KeyCode::Back,
+        glfw::Key::Insert => KeyCode::Insert,
+        glfw::Key::Delete => KeyCode::Delete,
+        glfw::Key::Right => KeyCode::Right,
+        glfw::Key::Left => KeyCode::Left,
+        glfw::Key::Down => KeyCode::Down,
+        glfw::Key::Up => KeyCode::Up,
+        glfw::Key::PageUp => KeyCode::PageUp,
+        glfw::Key::PageDown => KeyCode::PageDown,
+        glfw::Key::Home => KeyCode::Home,
+        glfw::Key::End => KeyCode::End,
+        glfw::Key::CapsLock => KeyCode::Capital,
+        glfw::Key::ScrollLock => KeyCode::Scroll,
+        glfw::Key::NumLock => KeyCode::Numlock,
+        glfw::Key::PrintScreen => KeyCode::Snapshot,
+        glfw::Key::Pause => KeyCode::Pause,
+        glfw::Key::F1 => KeyCode::F1,
+        glfw::Key::F2 => KeyCode::F2,
+        glfw::Key::F3 => KeyCode::F3,
+        glfw::Key::F4 => KeyCode::F4,
+        glfw::Key::F5 => KeyCode::F5,
+        glfw::Key::F6 => KeyCode::F6,
+        glfw::Key::F7 => KeyCode::F7,
+        glfw::Key::F8 => KeyCode::F8,
+        glfw::Key::F9 => KeyCode::F9,
+        glfw::Key::F10 => KeyCode::F10,
+        glfw::Key::F11 => KeyCode::F11,
+        glfw::Key::F12 => KeyCode::F12,
+        glfw::Key::F13 => KeyCode::F13,
+        glfw::Key::F14 => KeyCode::F14,
+        glfw::Key::F15 => KeyCode::F15,
+        glfw::Key::F16 => KeyCode::None,
+        glfw::Key::F17 => KeyCode::None,
+        glfw::Key::F18 => KeyCode::None,
+        glfw::Key::F19 => KeyCode::None,
+        glfw::Key::F20 => KeyCode::None,
+        glfw::Key::F21 => KeyCode::None,
+        glfw::Key::F22 => KeyCode::None,
+        glfw::Key::F23 => KeyCode::None,
+        glfw::Key::F24 => KeyCode::None,
+        glfw::Key::F25 => KeyCode::None,
+        glfw::Key::Kp0 => KeyCode::Numpad0,
+        glfw::Key::Kp1 => KeyCode::Numpad1,
+        glfw::Key::Kp2 => KeyCode::Numpad2,
+        glfw::Key::Kp3 => KeyCode::Numpad3,
+        glfw::Key::Kp4 => KeyCode::Numpad4,
+        glfw::Key::Kp5 => KeyCode::Numpad5,
+        glfw::Key::Kp6 => KeyCode::Numpad6,
+        glfw::Key::Kp7 => KeyCode::Numpad7,
+        glfw::Key::Kp8 => KeyCode::Numpad8,
+        glfw::Key::Kp9 => KeyCode::Numpad9,
+        glfw::Key::KpDecimal => KeyCode::Decimal,
+        glfw::Key::KpDivide => KeyCode::Divide,
+        glfw::Key::KpMultiply => KeyCode::Multiply,
+        glfw::Key::KpSubtract => KeyCode::Subtract,
+        glfw::Key::KpAdd => KeyCode::Add,
+        glfw::Key::KpEnter => KeyCode::NumpadEnter,
+        glfw::Key::KpEqual => KeyCode::NumpadEquals,
+        glfw::Key::LeftShift => KeyCode::LShift,
+        glfw::Key::LeftControl => KeyCode::LControl,
+        glfw::Key::LeftAlt => KeyCode::LAlt,
+        glfw::Key::LeftSuper => KeyCode::LWin,
+        glfw::Key::RightShift => KeyCode::RShift,
+        glfw::Key::RightControl => KeyCode::RControl,
+        glfw::Key::RightAlt => KeyCode::RAlt,
+        glfw::Key::RightSuper => KeyCode::RWin,
+        glfw::Key::Menu => KeyCode::LMenu,
+        glfw::Key::Unknown => KeyCode::None,
     }
 }

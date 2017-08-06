@@ -1,0 +1,46 @@
+[
+    Context(
+        id: Default,
+        mappings: [
+            (
+                raw_type: Key,
+                raw_args: (
+                    action: Some(Release),
+                    keycode: Some(Escape),
+                ),
+                action: Close,
+            ),
+            (
+                raw_type: Key,
+                raw_args: (
+                    keycode: Some(W),
+                ),
+                action: MoveForward,
+            ),
+            (
+                raw_type: Key,
+                raw_args: (
+                    action: Some(Release),
+                    keycode: Some(Key1),
+                    modifier: Some(ALT),
+                ),
+                action: FireAbility1,
+            ),
+            (
+                raw_type: Motion,
+                raw_args: (),
+                action: RotateDirection,
+            ),
+        ],
+    ),
+    Context(
+        id: UI,
+        mappings: [
+            (
+                raw_type: Char,
+                raw_args: (),
+                action: Text,
+            )
+        ],
+    )
+]

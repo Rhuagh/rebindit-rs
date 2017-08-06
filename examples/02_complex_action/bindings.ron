@@ -1,0 +1,60 @@
+[
+    Context(
+        id: Default,
+        mappings: [
+            (
+                raw_type: Button,
+                raw_args: (
+                    button: Some(1)
+                ),
+                action: Game(InternalButton),
+            ),
+            (
+                raw_type: Motion,
+                raw_args: (
+                    state_active: Some(Game(InternalButton)),
+                ),
+                action: Game(RotateCamera),
+            ),
+            (
+                raw_type: Key,
+                raw_args: (
+                    action: Some(Release),
+                    keycode: Some(Escape),
+                ),
+                action: UI(Close),
+            ),
+            (
+                raw_type: Key,
+                raw_args: (
+                    keycode: Some(W),
+                ),
+                action: Game(MoveForward),
+            ),
+            (
+                raw_type: Key,
+                raw_args: (
+                    action: Some(Release),
+                    keycode: Some(Key1),
+                    modifier: Some(ALT),
+                ),
+                action: Game(FireAbility1),
+            ),
+            (
+                raw_type: Motion,
+                raw_args: (),
+                action: Game(RotateDirection),
+            ),
+        ],
+    ),
+    Context(
+        id: UI,
+        mappings: [
+            (
+                raw_type: Char,
+                raw_args: (),
+                action: UI(Text),
+            )
+        ],
+    )
+]

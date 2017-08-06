@@ -4,32 +4,23 @@ extern crate glutin;
 extern crate remawin;
 extern crate remawin_glutin_mapper;
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+
 use remawin_glutin_mapper::GlutinEventMapper;
 use remawin::{Event, WindowEvent, ControllerEvent};
 use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 
-use std::str::FromStr;
 use glutin::GlContext;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum ContextId {
     Default,
     UI
 }
 
-impl FromStr for ContextId {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<ContextId, ()> {
-        match s {
-            "UI" => Ok(ContextId::UI),
-            "Default" => Ok(ContextId::Default),
-            _ => Err(())
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum UIAction {
     Close,
     Text
@@ -48,23 +39,13 @@ impl ActionMetadata for UIAction {
     }
 }
 
-impl FromStr for UIAction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<UIAction, ()> {
-        match s {
-            "Close" => Ok(UIAction::Close),
-            "Text" => Ok(UIAction::Text),
-            _ => Err(())
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum GameAction {
     MoveForward,
     FireAbility1,
-    RotateDirection
+    RotateDirection,
+    InternalButton,
+    RotateCamera
 }
 
 impl ActionMetadata for GameAction {
@@ -73,6 +54,8 @@ impl ActionMetadata for GameAction {
             &GameAction::MoveForward => MappedType::State,
             &GameAction::FireAbility1 => MappedType::Action,
             &GameAction::RotateDirection => MappedType::Range,
+            &GameAction::InternalButton => MappedType::State,
+            &GameAction::RotateCamera => MappedType::Range,
         }
     }
 
@@ -84,20 +67,7 @@ impl ActionMetadata for GameAction {
     }
 }
 
-impl FromStr for GameAction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<GameAction, ()> {
-        match s {
-            "MoveForward" => Ok(GameAction::MoveForward),
-            "FireAbility1" => Ok(GameAction::FireAbility1),
-            "RotateDirection" => Ok(GameAction::RotateDirection),
-            _ => Err(())
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum ControllerAction {
     UI(UIAction),
     Game(GameAction)
@@ -116,22 +86,6 @@ impl ActionMetadata for ControllerAction {
             &ControllerAction::UI(ref action) => action.args(),
             &ControllerAction::Game(ref action) => action.args(),
         }
-    }
-}
-
-impl FromStr for ControllerAction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<ControllerAction, ()> {
-        match s.parse::<GameAction>() {
-            Ok(action) => return Ok(ControllerAction::Game(action)),
-            _ => ()
-        };
-        match s.parse::<UIAction>() {
-            Ok(action) => return Ok(ControllerAction::UI(action)),
-            _ => ()
-        };
-        Err(())
     }
 }
 
@@ -158,7 +112,7 @@ fn main() {
 
     let mut event_mapper = GlutinEventMapper::<ControllerAction, ContextId>::new((1024.0, 768.0));
     event_mapper.remapper_mut()
-        .with_bindings_file("../../config/bindings.yml")
+        .with_bindings_file("bindings.ron")
         .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
@@ -172,7 +126,10 @@ fn main() {
                 Event::Controller(ControllerEvent::Action(ControllerAction::UI(UIAction::Close), _)) => {
                     println!("closing!");
                     running = false;
-                }
+                },
+                Event::Controller(x) => {
+                    println!("controller event: {:?}", x);
+                },
                 _ => ()
             }
         }

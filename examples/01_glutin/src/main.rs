@@ -4,32 +4,23 @@ extern crate glutin;
 extern crate remawin;
 extern crate remawin_glutin_mapper;
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+
 use remawin_glutin_mapper::GlutinEventMapper;
 use remawin::{Event, WindowEvent, ControllerEvent};
 use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 
-use std::str::FromStr;
 use glutin::GlContext;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum ContextId {
     Default,
     UI
 }
 
-impl FromStr for ContextId {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<ContextId, ()> {
-        match s {
-            "UI" => Ok(ContextId::UI),
-            "Default" => Ok(ContextId::Default),
-            _ => Err(())
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum Action {
     Close,
     Text,
@@ -57,21 +48,6 @@ impl ActionMetadata for Action {
     }
 }
 
-impl FromStr for Action {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Action, ()> {
-        match s {
-            "Close" => Ok(Action::Close),
-            "Text" => Ok(Action::Text),
-            "MoveForward" => Ok(Action::MoveForward),
-            "FireAbility1" => Ok(Action::FireAbility1),
-            "RotateDirection" => Ok(Action::RotateDirection),
-            _ => Err(())
-        }
-    }
-}
-
 fn poll_events(events_loop : &mut glutin::EventsLoop) -> Vec<glutin::Event> {
     let mut raw = Vec::default();
     events_loop.poll_events(|event| {
@@ -95,7 +71,7 @@ fn main() {
 
     let mut event_mapper = GlutinEventMapper::<Action, ContextId>::new((1024.0, 768.0));
     event_mapper.remapper_mut()
-        .with_bindings_file("../../config/bindings.yml")
+        .with_bindings_file("../../config/bindings.ron")
         .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
