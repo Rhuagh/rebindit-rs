@@ -1,7 +1,0 @@
-[package]
-name = "remawin_state_tracker"
-version = "0.1.0"
-authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
-
-[dependencies]
-remawin = { path = "../remawin/" }
