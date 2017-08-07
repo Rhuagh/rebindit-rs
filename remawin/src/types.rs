@@ -304,6 +304,7 @@ impl <ACTION, ID> Context<ACTION, ID>
     }
 }
 
+#[derive(Debug)]
 pub enum BindingsError {
     FileNotFound,
     ReadFailed,

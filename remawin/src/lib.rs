@@ -8,6 +8,9 @@ extern crate ron;
 
 extern crate time;
 
+#[macro_use]
+extern crate log;
+
 pub mod event;
 pub mod types;
 pub mod raw;
@@ -18,7 +21,7 @@ pub use event::*;
 pub use types::{ActionMetadata, ActionArgument, MappedType, Context, StateStorage, StateInfo};
 pub use raw::RawInput;
 
-use types::{ActiveContext, contexts_from_file};
+use types::{ActiveContext, contexts_from_file, contexts_from_reader, contexts_from_str};
 use raw::RawInputEvent;
 
 use std::collections::HashMap;
@@ -61,12 +64,30 @@ impl<ACTION, ID> InputReMapper<ACTION, ID>
         for c in contexts {
             self.contexts.insert(c.id.clone(), c.clone());
         }
-        println!("{:?}", self.contexts);
+        debug!("{:?}", self.contexts);
         self
     }
 
-    pub fn with_bindings_file(&mut self, file: &str) -> &mut Self {
-        self.with_contexts(&mut contexts_from_file(file).unwrap_or_default())
+    pub fn with_bindings_from_file(&mut self, file: &str) -> &mut Self {
+        self.with_contexts(&mut contexts_from_file(file).unwrap_or_else(|e| {
+            debug!("Failed loading bindings file: {:?}", e);
+            Vec::default()
+        }))
+    }
+
+    pub fn with_bindings_from_reader<R>(&mut self, rdr: R) -> &mut Self
+        where R : std::io::Read {
+        self.with_contexts(&mut contexts_from_reader(rdr).unwrap_or_else(|e| {
+            debug!("Failed loading bindings from reader: {:?}", e);
+            Vec::default()
+        }))
+    }
+
+    pub fn with_bindings_from_str(&mut self, data: &str) -> &mut Self{
+        self.with_contexts(&mut contexts_from_str(data).unwrap_or_else(|e| {
+            debug!("Failed loading bindings from string: {:?}", e);
+            Vec::default()
+        }))
     }
 
     pub fn activate_context(&mut self, context_id : &ID, priority: u32) {
@@ -75,7 +96,26 @@ impl<ACTION, ID> InputReMapper<ACTION, ID>
             None => ()
         };
         self.active_contexts.sort();
-        println!("{:?}", self.active_contexts);
+        debug!("{:?}", self.active_contexts);
+    }
+
+    pub fn toggle_context(&mut self, context_id: &ID, priority: u32) {
+        match self.contexts.get(context_id) {
+            Some(_) => {
+                match self.active_contexts.iter().position(|ac| ac.context_id == *context_id) {
+                    Some(ac_index) => {
+                        self.active_contexts.remove(ac_index);
+                        ()
+                    },
+                    None => {
+                        self.active_contexts.push(ActiveContext::new(priority, context_id));
+                        self.active_contexts.sort();
+                    }
+                };
+            },
+            None => ()
+        };
+        debug!("{:?}", self.active_contexts);
     }
 
     pub fn deactivate_context(&mut self, context_id : &ID) {
@@ -91,6 +131,7 @@ impl<ACTION, ID> InputReMapper<ACTION, ID>
             },
             None => ()
         };
+        debug!("{:?}", self.active_contexts);
     }
 
     pub fn get_state_info(&self, state: &ACTION) -> Option<StateInfo> {
