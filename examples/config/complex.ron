@@ -51,29 +51,5 @@
                 action: Game(ToggleUI),
             ),
         ],
-    ),
-    Context(
-        id: UI,
-        mappings: [
-            (
-                raw_type: Char,
-                raw_args: (),
-                action: UI(Text),
-            ),
-            (
-                raw_type: Button,
-                raw_args: (
-                    button: Some(1),
-                ),
-                action: UI(Click),
-            ),
-            (
-                raw_type: Motion,
-                raw_args: (
-                    state_active: Some(UI(Click)),
-                ),
-                action: UI(Drag),
-            ),
-        ],
     )
 ]

@@ -218,6 +218,44 @@ pub struct RawArgs<ACTION : Clone> {
     pub state_active : Option<ACTION>
 }
 
+impl <ACTION: Clone> RawArgs<ACTION> {
+
+    pub fn new() -> RawArgs<ACTION> {
+        RawArgs {
+            action : None,
+            keycode : None,
+            button : None,
+            modifier : None,
+            state_active : None,
+        }
+    }
+
+    pub fn with_action(mut self, action: RawAction) -> Self {
+        self.action = Some(action);
+        self
+    }
+
+    pub fn with_keycode(mut self, keycode: KeyCode) -> Self {
+        self.keycode = Some(keycode);
+        self
+    }
+
+    pub fn with_button(mut self, button: ButtonId) -> Self {
+        self.button = Some(button);
+        self
+    }
+
+    pub fn with_modifier(mut self, modifier: Modifier) -> Self {
+        self.modifier = Some(modifier);
+        self
+    }
+
+    pub fn with_state_active(mut self, state: ACTION) -> Self {
+        self.state_active = Some(state);
+        self
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub enum ActionArgument {
     KeyCode,
@@ -302,17 +340,25 @@ pub struct Context<ACTION, ID>
 }
 
 impl <ACTION, ID> Context<ACTION, ID>
-    where ACTION: Hash + Eq + Clone,
+    where ACTION: Hash + Eq + Clone + ActionMetadata,
           ID: Clone {
-    pub fn new(id: ID, mappings : Vec<Mapping<ACTION>>) -> Self {
+
+    pub fn new(id: ID) -> Self {
+        Self::new_with_mappings(id, Vec::default())
+    }
+
+    pub fn new_with_mappings(id: ID, mappings : Vec<Mapping<ACTION>>) -> Self {
         Context {
             id : id,
             mappings : mappings
         }
     }
 
-    pub fn with_mapping(mut self, mapping: Mapping<ACTION>) -> Self {
-        self.mappings.push(mapping);
+    pub fn with_mapping(mut self,
+                        raw_type: RawType,
+                        raw_args : RawArgs<ACTION>,
+                        action: ACTION) -> Self {
+        self.mappings.push(Mapping::new(raw_type, raw_args, action));
         self
     }
 

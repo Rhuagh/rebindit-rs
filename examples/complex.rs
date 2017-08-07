@@ -13,7 +13,7 @@ extern crate remawin_glutin_mapper;
 
 use remawin_glutin_mapper::GlutinEventMapper;
 use remawin::{Event, WindowEvent, ControllerEvent};
-use remawin::types::{MappedType, ActionMetadata, ActionArgument};
+use remawin::types::{MappedType, ActionMetadata, ActionArgument, Context, RawType, RawArgs};
 
 use glutin::GlContext;
 
@@ -110,6 +110,18 @@ fn poll_events(events_loop : &mut glutin::EventsLoop) -> Vec<glutin::Event> {
     raw
 }
 
+impl Into<ControllerAction> for UIAction {
+    fn into(self) -> ControllerAction {
+        ControllerAction::UI(self)
+    }
+}
+
+impl Into<ControllerAction> for GameAction {
+    fn into(self) -> ControllerAction {
+        ControllerAction::Game(self)
+    }
+}
+
 fn main() {
     env_logger::init().unwrap();
     debug!("Starting");
@@ -126,6 +138,16 @@ fn main() {
 
     let mut event_mapper = GlutinEventMapper::<ControllerAction, ContextId>::new((1024.0, 768.0));
     event_mapper.remapper_mut()
+        .with_context(Context::new(ContextId::UI)
+            .with_mapping(RawType::Char,
+                          RawArgs::new(),
+                          UIAction::Text.into())
+            .with_mapping(RawType::Button,
+                          RawArgs::new().with_button(1),
+                          UIAction::Click.into())
+            .with_mapping(RawType::Motion,
+                          RawArgs::new().with_state_active(UIAction::Click.into()),
+                          UIAction::Drag.into()))
         .with_bindings_from_file("examples/config/complex.ron")
         .activate_context(&ContextId::Default, 1);
 
@@ -134,18 +156,18 @@ fn main() {
         for event in event_mapper.process(&mut poll_events(&mut events_loop)) {
             match event {
                 Event::Window(WindowEvent::Close) => {
-                    warn!("closing!");
+                    println!("closing!");
                     running = false;
                 },
                 Event::Controller(ControllerEvent::Action(ControllerAction::UI(UIAction::Close), _)) => {
-                    warn!("closing!");
+                    println!("closing!");
                     running = false;
                 },
                 Event::Controller(ControllerEvent::Action(ControllerAction::Game(GameAction::ToggleUI), _)) => {
                     event_mapper.remapper_mut().toggle_context(&ContextId::UI, 2);
                 }
                 Event::Controller(x) => {
-                    info!("controller event: {:?}", x);
+                    println!("controller event: {:?}", x);
                 },
                 _ => ()
             }
