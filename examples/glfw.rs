@@ -1,18 +1,21 @@
 #[macro_use]
 extern crate log;
-extern crate glutin;
+extern crate glfw;
 extern crate remawin;
-extern crate remawin_glutin_mapper;
-
+extern crate remawin_glfw_mapper;
 extern crate serde;
+
 #[macro_use]
 extern crate serde_derive;
 
-use remawin_glutin_mapper::GlutinEventMapper;
+use std::sync::mpsc::Receiver;
+use glfw::Context;
+
+use remawin_glfw_mapper::GlfwEventMapper;
 use remawin::{Event, WindowEvent, ControllerEvent};
 use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 
-use glutin::GlContext;
+use std::default::Default;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum ContextId {
@@ -48,48 +51,55 @@ impl ActionMetadata for Action {
     }
 }
 
-fn poll_events(events_loop : &mut glutin::EventsLoop) -> Vec<glutin::Event> {
+fn window_init(width : u32, height: u32, title : &str) -> (glfw::Glfw, glfw::Window, Receiver<(f64, glfw::WindowEvent)>) {
+    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 2));
+    glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
+    glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+    glfw.set_error_callback(glfw::FAIL_ON_ERRORS);
+    let (mut window, events) =
+        match glfw.create_window(width, height, title, glfw::WindowMode::Windowed) {
+            Some(d) => d,
+            None => panic!("Window was not created")
+        };
+    window.set_all_polling(true);
+    (glfw, window, events)
+}
+
+fn poll_events(glfw: &mut glfw::Glfw, events : &Receiver<(f64, glfw::WindowEvent)>) -> Vec<(f64, glfw::WindowEvent)> {
+    glfw.poll_events();
     let mut raw = Vec::default();
-    events_loop.poll_events(|event| {
-        raw.push(event);
-    });
+    for (time, event) in glfw::flush_messages(&events) {
+        raw.push((time, event));
+    }
     raw
 }
 
 fn main() {
     debug!("Starting");
-    let mut events_loop = glutin::EventsLoop::new();
-    let window = glutin::WindowBuilder::new().with_title("Hello, world!").with_dimensions(1024, 768);
-    let context = glutin::ContextBuilder::new().with_vsync(true);
-    let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
-
-    unsafe {
-        gl_window.make_current().unwrap();
-    }
-
+    let (mut glfw, mut window, events) = window_init(1024, 768, "Test");
     debug!("Window initialized");
 
-    let mut event_mapper = GlutinEventMapper::<Action, ContextId>::new((1024.0, 768.0));
+    let mut event_mapper = GlfwEventMapper::<Action, ContextId>::new((1024.0, 768.0));
     event_mapper.remapper_mut()
-        .with_bindings_file("../../config/bindings.ron")
+        .with_bindings_from_file("examples/config/simple.ron")
         .activate_context(&ContextId::Default, 1);
 
-    let mut running = true;
-    while running {
-        for event in event_mapper.process(&mut poll_events(&mut events_loop)) {
+    while !window.should_close() {
+        for event in event_mapper.process(&mut poll_events(&mut glfw, &events)) {
             match event {
                 Event::Window(WindowEvent::Close) => {
                     println!("closing!");
-                    running = false;
+                    window.set_should_close(true);
                 },
                 Event::Controller(ControllerEvent::Action(Action::Close, _)) => {
                     println!("closing!");
-                    running = false;
+                    window.set_should_close(true);
                 }
                 _ => ()
             }
         }
-        gl_window.swap_buffers().unwrap();
+        window.swap_buffers();
     }
 
     return

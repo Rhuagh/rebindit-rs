@@ -1,0 +1,16 @@
+[package]
+name = "remawin_app"
+version = "0.1.0"
+authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
+
+[dependencies]
+glfw = "*"
+glutin = "*"
+remawin = { path = "remawin/" }
+remawin_glutin_mapper = { path = "remawin_glutin_mapper/" }
+remawin_glfw_mapper = { path = "remawin_glfw_mapper/" }
+serde = "*"
+serde_derive = "*"
+log = "*"
+env_logger = "*"
+

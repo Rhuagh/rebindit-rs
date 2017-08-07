@@ -45,6 +45,14 @@
                 raw_args: (),
                 action: Game(RotateDirection),
             ),
+            (
+                raw_type: Key,
+                raw_args: (
+                    keycode: Some(F1),
+                    action: Some(Release),
+                ),
+                action: Game(ToggleUI),
+            ),
         ],
     ),
     Context(
@@ -54,7 +62,21 @@
                 raw_type: Char,
                 raw_args: (),
                 action: UI(Text),
-            )
+            ),
+            (
+                raw_type: Button,
+                raw_args: (
+                    button: Some(1),
+                ),
+                action: UI(Click),
+            ),
+            (
+                raw_type: Motion,
+                raw_args: (
+                    state_active: Some(UI(Click)),
+                ),
+                action: UI(Drag),
+            ),
         ],
     )
 ]

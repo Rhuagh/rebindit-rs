@@ -21,70 +21,29 @@ pub enum ContextId {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
-pub enum UIAction {
+pub enum Action {
     Close,
-    Text
-}
-
-impl ActionMetadata for UIAction {
-    fn mapped_type(&self) -> MappedType {
-        match self {
-            &UIAction::Close => MappedType::Action,
-            &UIAction::Text => MappedType::Action,
-        }
-    }
-
-    fn args(&self) -> Vec<ActionArgument> {
-        Vec::default()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
-pub enum GameAction {
+    Text,
     MoveForward,
     FireAbility1,
-    RotateDirection,
-    InternalButton,
-    RotateCamera
+    RotateDirection
 }
 
-impl ActionMetadata for GameAction {
+impl ActionMetadata for Action {
     fn mapped_type(&self) -> MappedType {
         match self {
-            &GameAction::MoveForward => MappedType::State,
-            &GameAction::FireAbility1 => MappedType::Action,
-            &GameAction::RotateDirection => MappedType::Range,
-            &GameAction::InternalButton => MappedType::State,
-            &GameAction::RotateCamera => MappedType::Range,
+            &Action::Close => MappedType::Action,
+            &Action::Text => MappedType::Action,
+            &Action::MoveForward => MappedType::State,
+            &Action::FireAbility1 => MappedType::Action,
+            &Action::RotateDirection => MappedType::Range,
         }
     }
 
     fn args(&self) -> Vec<ActionArgument> {
         match self {
-            &GameAction::FireAbility1 => vec![ActionArgument::CursorPosition],
+            &Action::FireAbility1 => vec![ActionArgument::CursorPosition],
             _ => Vec::default()
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
-pub enum ControllerAction {
-    UI(UIAction),
-    Game(GameAction)
-}
-
-impl ActionMetadata for ControllerAction {
-    fn mapped_type(&self) -> remawin::types::MappedType {
-        match self {
-            &ControllerAction::UI(ref action) => action.mapped_type(),
-            &ControllerAction::Game(ref action) => action.mapped_type(),
-        }
-    }
-
-    fn args(&self) -> Vec<ActionArgument> {
-        match self {
-            &ControllerAction::UI(ref action) => action.args(),
-            &ControllerAction::Game(ref action) => action.args(),
         }
     }
 }
@@ -110,9 +69,9 @@ fn main() {
 
     debug!("Window initialized");
 
-    let mut event_mapper = GlutinEventMapper::<ControllerAction, ContextId>::new((1024.0, 768.0));
+    let mut event_mapper = GlutinEventMapper::<Action, ContextId>::new((1024.0, 768.0));
     event_mapper.remapper_mut()
-        .with_bindings_file("bindings.ron")
+        .with_bindings_from_file("examples/config/simple.ron")
         .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
@@ -123,13 +82,10 @@ fn main() {
                     println!("closing!");
                     running = false;
                 },
-                Event::Controller(ControllerEvent::Action(ControllerAction::UI(UIAction::Close), _)) => {
+                Event::Controller(ControllerEvent::Action(Action::Close, _)) => {
                     println!("closing!");
                     running = false;
-                },
-                Event::Controller(x) => {
-                    println!("controller event: {:?}", x);
-                },
+                }
                 _ => ()
             }
         }
