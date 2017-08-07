@@ -52,7 +52,8 @@ impl<ACTION, ID> InputReMapper<ACTION, ID>
         }
     }
 
-    pub fn with_context(&mut self, context : Context<ACTION, ID>) -> &mut Self {
+    pub fn with_context(&mut self, mut context : Context<ACTION, ID>) -> &mut Self {
+        context.sanitize();
         self.contexts.insert(context.id.clone(), context);
         self
     }
@@ -61,8 +62,8 @@ impl<ACTION, ID> InputReMapper<ACTION, ID>
         if contexts.len() == 0 {
             return self;
         }
-        for c in contexts {
-            self.contexts.insert(c.id.clone(), c.clone());
+        for c in contexts.drain(..) {
+            self.with_context(c);
         }
         debug!("{:?}", self.contexts);
         self

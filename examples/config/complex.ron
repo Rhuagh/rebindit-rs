@@ -19,7 +19,6 @@
             (
                 raw_type: Key,
                 raw_args: (
-                    action: Some(Release),
                     keycode: Some(Escape),
                 ),
                 action: UI(Close),
@@ -34,7 +33,6 @@
             (
                 raw_type: Key,
                 raw_args: (
-                    action: Some(Release),
                     keycode: Some(Key1),
                     modifier: Some(ALT),
                 ),
@@ -49,7 +47,6 @@
                 raw_type: Key,
                 raw_args: (
                     keycode: Some(F1),
-                    action: Some(Release),
                 ),
                 action: Game(ToggleUI),
             ),

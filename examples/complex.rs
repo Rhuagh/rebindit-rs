@@ -111,7 +111,7 @@ fn poll_events(events_loop : &mut glutin::EventsLoop) -> Vec<glutin::Event> {
 }
 
 fn main() {
-    env_logger::init();
+    env_logger::init().unwrap();
     debug!("Starting");
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new().with_title("Hello, world!").with_dimensions(1024, 768);

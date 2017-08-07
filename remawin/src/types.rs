@@ -274,6 +274,24 @@ impl <ACTION: ActionMetadata + Clone> Mapping<ACTION> {
     }
 }
 
+impl <ACTION: Clone> Mapping<ACTION> {
+    pub fn sanitize(&mut self) {
+        match self.mapped_type {
+            Some(MappedType::Action) => {
+                if self.raw_args.action == None {
+                    self.raw_args.action = Some(RawAction::Release);
+                }
+            },
+            Some(MappedType::State) => {
+                if self.raw_args.action != None {
+                    self.raw_args.action = None;
+                }
+            },
+            _ => ()
+        }
+    }
+}
+
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Context<ACTION, ID>
@@ -301,6 +319,12 @@ impl <ACTION, ID> Context<ACTION, ID>
     pub fn with_mappings(mut self, mut mappings: Vec<Mapping<ACTION>>) -> Self {
         self.mappings.append(&mut mappings);
         self
+    }
+
+    pub fn sanitize(&mut self) {
+        for m in &mut self.mappings {
+            m.sanitize();
+        }
     }
 }
 
