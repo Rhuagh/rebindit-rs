@@ -3,19 +3,29 @@ REMapping WINdow INput
 Example
 
 ```rust
+#[macro_use]
+extern crate log;
 extern crate glutin;
 extern crate remawin;
-extern crate remawin_source_glutin;
+extern crate remawin_glutin_mapper;
 
-use remawin::InputHandler;
-use remawin_source_glutin::GlutinInputSource;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+
+use remawin_glutin_mapper::GlutinEventMapper;
 use remawin::{Event, WindowEvent, ControllerEvent};
 use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 
-use std::str::FromStr;
 use glutin::GlContext;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+pub enum ContextId {
+    Default,
+    UI
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum Action {
     Close,
     Text,
@@ -43,23 +53,17 @@ impl ActionMetadata for Action {
     }
 }
 
-impl FromStr for Action {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Action, ()> {
-        match s {
-            "Close" => Ok(Action::Close),
-            "Text" => Ok(Action::Text),
-            "MoveForward" => Ok(Action::MoveForward),
-            "FireAbility1" => Ok(Action::FireAbility1),
-            "RotateDirection" => Ok(Action::RotateDirection),
-            _ => Err(())
-        }
-    }
+fn poll_events(events_loop : &mut glutin::EventsLoop) -> Vec<glutin::Event> {
+    let mut raw = Vec::default();
+    events_loop.poll_events(|event| {
+        raw.push(event);
+    });
+    raw
 }
 
 fn main() {
-    let events_loop = glutin::EventsLoop::new();
+    debug!("Starting");
+    let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new().with_title("Hello, world!").with_dimensions(1024, 768);
     let context = glutin::ContextBuilder::new().with_vsync(true);
     let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
@@ -68,15 +72,16 @@ fn main() {
         gl_window.make_current().unwrap();
     }
 
-    let mut input_handler = InputHandler::<Action>::new()
-        .with_bindings_file("config/bindings.yml")
-        .with_input_source(GlutinInputSource::new(events_loop, (1024.0, 768.0)));
+    debug!("Window initialized");
 
-    input_handler.activate_context("default", 1);
+    let mut event_mapper = GlutinEventMapper::<Action, ContextId>::new((1024.0, 768.0));
+    event_mapper.remapper_mut()
+        .with_bindings_from_file("examples/config/simple.ron")
+        .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
     while running {
-        for event in input_handler.process() {
+        for event in event_mapper.process(&mut poll_events(&mut events_loop)) {
             match event {
                 Event::Window(WindowEvent::Close) => {
                     println!("closing!");
