@@ -1,11 +1,11 @@
 [package]
-name = "remawin-examples"
+name = "rebindit-examples"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
 glutin = "*"
-remawin = { path = "../remawin/" }
+rebindit = { path = "../rebindit/" }
 serde = "*"
 serde_derive = "*"
 log = "*"

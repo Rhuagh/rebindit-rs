@@ -3,51 +3,33 @@
         id: Default,
         mappings: [
             (
-                raw_type: Button,
-                raw_args: (
-                    button: Some(1)
-                ),
+                raw_type: Button(Left),
                 action: Game(InternalButton),
             ),
             (
                 raw_type: Motion,
-                raw_args: (
-                    state_active: Some(Game(InternalButton)),
-                ),
+                state_active: Some(Game(InternalButton)),
                 action: Game(RotateCamera),
             ),
             (
-                raw_type: Key,
-                raw_args: (
-                    keycode: Some(Escape),
-                ),
+                raw_type: Key(Escape),
                 action: UI(Close),
             ),
             (
-                raw_type: Key,
-                raw_args: (
-                    keycode: Some(W),
-                ),
+                raw_type: Key(W),
                 action: Game(MoveForward),
             ),
             (
-                raw_type: Key,
-                raw_args: (
-                    keycode: Some(Key1),
-                    modifier: Some(ALT),
-                ),
+                raw_type: Key(Key1),
+                modifier: Some(ALT),
                 action: Game(FireAbility1),
             ),
             (
                 raw_type: Motion,
-                raw_args: (),
                 action: Game(RotateDirection),
             ),
             (
-                raw_type: Key,
-                raw_args: (
-                    keycode: Some(F1),
-                ),
+                raw_type: Key(F1),
                 action: Game(ToggleUI),
             ),
         ],

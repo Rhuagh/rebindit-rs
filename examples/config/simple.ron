@@ -3,32 +3,22 @@
         id: Default,
         mappings: [
             (
-                raw_type: Key,
-                raw_args: (
-                    action: Some(Release),
-                    keycode: Some(Escape),
-                ),
+                raw_type: Key(Escape),
+                state : Some(Release),
                 action: Close,
             ),
             (
-                raw_type: Key,
-                raw_args: (
-                    keycode: Some(W),
-                ),
+                raw_type: Key(W),
                 action: MoveForward,
             ),
             (
-                raw_type: Key,
-                raw_args: (
-                    action: Some(Release),
-                    keycode: Some(Key1),
-                    modifier: Some(ALT),
-                ),
+                raw_type: Key(Key1),
+                state : Some(Release),
+                modifier : Some(ALT),
                 action: FireAbility1,
             ),
             (
                 raw_type: Motion,
-                raw_args: (),
                 action: RotateDirection,
             ),
         ],
@@ -38,7 +28,6 @@
         mappings: [
             (
                 raw_type: Char,
-                raw_args: (),
                 action: Text,
             )
         ],

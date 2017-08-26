@@ -8,17 +8,18 @@ extern crate serde;
 
 extern crate glutin;
 
-extern crate remawin;
+extern crate rebindit;
 
-use remawin::{Event, WindowEvent, ControllerEvent, InputReMapper};
-use remawin::types::{MappedType, ActionMetadata, ActionArgument, Context, RawType, RawArgs};
+use rebindit::{Event, WindowEvent, ControllerEvent, InputRebinder};
+use rebindit::types::{MappedType, ActionMetadata, ActionArgument, Context, RawType, Mapping,
+                      MouseButton};
 
 use glutin::GlContext;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum ContextId {
     Default,
-    UI
+    UI,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
@@ -26,7 +27,7 @@ pub enum UIAction {
     Close,
     Click,
     Drag,
-    Text
+    Text,
 }
 
 impl ActionMetadata for UIAction {
@@ -43,7 +44,7 @@ impl ActionMetadata for UIAction {
         match self {
             &UIAction::Click => vec![ActionArgument::CursorPosition],
             &UIAction::Text => vec![ActionArgument::Value],
-            _ => Vec::default()
+            _ => Vec::default(),
         }
     }
 }
@@ -55,7 +56,7 @@ pub enum GameAction {
     RotateDirection,
     InternalButton,
     RotateCamera,
-    ToggleUI
+    ToggleUI,
 }
 
 impl ActionMetadata for GameAction {
@@ -73,7 +74,7 @@ impl ActionMetadata for GameAction {
     fn args(&self) -> Vec<ActionArgument> {
         match self {
             &GameAction::FireAbility1 => vec![ActionArgument::CursorPosition],
-            _ => Vec::default()
+            _ => Vec::default(),
         }
     }
 }
@@ -81,11 +82,11 @@ impl ActionMetadata for GameAction {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub enum ControllerAction {
     UI(UIAction),
-    Game(GameAction)
+    Game(GameAction),
 }
 
 impl ActionMetadata for ControllerAction {
-    fn mapped_type(&self) -> remawin::types::MappedType {
+    fn mapped_type(&self) -> rebindit::types::MappedType {
         match self {
             &ControllerAction::UI(ref action) => action.mapped_type(),
             &ControllerAction::Game(ref action) => action.mapped_type(),
@@ -100,11 +101,9 @@ impl ActionMetadata for ControllerAction {
     }
 }
 
-fn poll_events(events_loop : &mut glutin::EventsLoop) -> Vec<glutin::Event> {
+fn poll_events(events_loop: &mut glutin::EventsLoop) -> Vec<glutin::Event> {
     let mut raw = Vec::default();
-    events_loop.poll_events(|event| {
-        raw.push(event);
-    });
+    events_loop.poll_events(|event| { raw.push(event); });
     raw
 }
 
@@ -124,7 +123,9 @@ fn main() {
     env_logger::init().unwrap();
     debug!("Starting");
     let mut events_loop = glutin::EventsLoop::new();
-    let window = glutin::WindowBuilder::new().with_title("Hello, world!").with_dimensions(1024, 768);
+    let window = glutin::WindowBuilder::new()
+        .with_title("Hello, world!")
+        .with_dimensions(1024, 768);
     let context = glutin::ContextBuilder::new().with_vsync(true);
     let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
 
@@ -134,19 +135,23 @@ fn main() {
 
     debug!("Window initialized");
 
-    let mut event_mapper = InputReMapper::<ControllerAction, ContextId>::new((1024.0, 768.0));
+    let mut event_mapper = InputRebinder::<ControllerAction, ContextId>::new((1024.0, 768.0));
     event_mapper
-        .with_context(Context::new(ContextId::UI)
-            .with_mapping(RawType::Char,
-                          RawArgs::new(),
-                          UIAction::Text.into())
-            .with_mapping(RawType::Button,
-                          RawArgs::new().with_button(1),
-                          UIAction::Click.into())
-            .with_mapping(RawType::Motion,
-                          RawArgs::new().with_state_active(UIAction::Click.into()),
-                          UIAction::Drag.into()))
-        .with_contexts(&mut remawin::util::contexts_from_file("config/complex.ron").unwrap())
+        .with_context(
+            Context::new(ContextId::UI)
+                .with_mapping(Mapping::new(RawType::Char, UIAction::Text.into()))
+                .with_mapping(Mapping::new(
+                    RawType::Button(MouseButton::Left),
+                    UIAction::Click.into(),
+                ))
+                .with_mapping(
+                    Mapping::new(RawType::Motion, UIAction::Drag.into())
+                        .with_state_active(UIAction::Click.into()),
+                ),
+        )
+        .with_contexts(&mut rebindit::util::contexts_from_file(
+            "config/complex.ron",
+        ).unwrap())
         .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
@@ -156,22 +161,29 @@ fn main() {
                 Event::Window(WindowEvent::Close) => {
                     println!("closing!");
                     running = false;
-                },
-                Event::Controller(ControllerEvent::Action(ControllerAction::UI(UIAction::Close), _)) => {
-                    println!("closing!");
-                    running = false;
-                },
-                Event::Controller(ControllerEvent::Action(ControllerAction::Game(GameAction::ToggleUI), _)) => {
-                    event_mapper.toggle_context(&ContextId::UI, 2);
+                }
+                Event::Controller(ControllerEvent::Action(a, _)) => {
+                    match a {
+                        ControllerAction::UI(UIAction::Close) => {
+                            println!("closing!");
+                            running = false;
+                        }
+                        ControllerAction::Game(GameAction::ToggleUI) => {
+                            event_mapper.toggle_context(&ContextId::UI, 2);
+                        }
+                        x => {
+                            println!("controller event: {:?}", x);
+                        }
+                    }
                 }
                 Event::Controller(x) => {
                     println!("controller event: {:?}", x);
-                },
-                _ => ()
+                }
+                _ => (),
             }
         }
         gl_window.swap_buffers().unwrap();
     }
 
-    return
+    return;
 }
