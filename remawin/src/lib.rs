@@ -7,6 +7,7 @@ extern crate serde;
 extern crate ron;
 
 extern crate time;
+extern crate winit;
 
 #[macro_use]
 extern crate log;
@@ -16,12 +17,13 @@ pub mod types;
 pub mod raw;
 pub mod mapping;
 pub mod util;
+pub mod winit_mapper;
 
 pub use event::*;
 pub use types::{ActionMetadata, ActionArgument, MappedType, Context, StateStorage, StateInfo};
 pub use raw::RawInput;
 
-use types::{ActiveContext, contexts_from_file, contexts_from_reader, contexts_from_str};
+use types::{ActiveContext, WindowData};
 use raw::RawInputEvent;
 
 use std::collections::HashMap;
@@ -38,17 +40,22 @@ pub struct InputReMapper<ACTION, ID>
           ID: Hash + Eq + Clone + Debug {
     contexts : HashMap<ID, Context<ACTION, ID>>,
     active_contexts : Vec<ActiveContext<ID>>,
-    state_storage : StateStorage<ACTION>
+    state_storage : StateStorage<ACTION>,
+    frame_data: WindowData,
 }
 
 impl<ACTION, ID> InputReMapper<ACTION, ID>
     where ACTION: Hash + Eq + Clone + ActionMetadata + Debug + DeserializeOwned,
           ID: Hash + Eq + Clone + Debug + DeserializeOwned {
-    pub fn new() -> InputReMapper<ACTION, ID> {
+    pub fn new(size : (f64, f64)) -> InputReMapper<ACTION, ID> {
         InputReMapper {
             contexts : HashMap::default(),
             active_contexts : Vec::default(),
-            state_storage : StateStorage::new()
+            state_storage : StateStorage::new(),
+            frame_data : WindowData {
+                size : size,
+                cursor_position : None
+            },
         }
     }
 
@@ -67,28 +74,6 @@ impl<ACTION, ID> InputReMapper<ACTION, ID>
         }
         debug!("{:?}", self.contexts);
         self
-    }
-
-    pub fn with_bindings_from_file(&mut self, file: &str) -> &mut Self {
-        self.with_contexts(&mut contexts_from_file(file).unwrap_or_else(|e| {
-            debug!("Failed loading bindings file: {:?}", e);
-            Vec::default()
-        }))
-    }
-
-    pub fn with_bindings_from_reader<R>(&mut self, rdr: R) -> &mut Self
-        where R : std::io::Read {
-        self.with_contexts(&mut contexts_from_reader(rdr).unwrap_or_else(|e| {
-            debug!("Failed loading bindings from reader: {:?}", e);
-            Vec::default()
-        }))
-    }
-
-    pub fn with_bindings_from_str(&mut self, data: &str) -> &mut Self{
-        self.with_contexts(&mut contexts_from_str(data).unwrap_or_else(|e| {
-            debug!("Failed loading bindings from string: {:?}", e);
-            Vec::default()
-        }))
     }
 
     pub fn activate_context(&mut self, context_id : &ID, priority: u32) {
@@ -178,5 +163,12 @@ impl<ACTION, ID> InputReMapper<ACTION, ID>
             .collect();
         window_input.extend(controller_input);
         window_input
+    }
+
+    pub fn process_winit_input(&mut self, events: &Vec<winit::Event>) -> Vec<Event<ACTION, ID>> {
+        let mut next = self.frame_data.clone();
+        let raw = events.iter().flat_map(|e| winit_mapper::process_event(e, &mut next)).collect();
+        self.frame_data = next;
+        self.process_raw_input(&raw)
     }
 }
