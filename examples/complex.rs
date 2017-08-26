@@ -151,7 +151,7 @@ fn main() {
 
     let mut running = true;
     while running {
-        for event in event_mapper.process_winit_input(&mut poll_events(&mut events_loop)) {
+        for event in event_mapper.process(&poll_events(&mut events_loop)) {
             match event {
                 Event::Window(WindowEvent::Close) => {
                     println!("closing!");

@@ -165,7 +165,7 @@ impl<ACTION, ID> InputReMapper<ACTION, ID>
         window_input
     }
 
-    pub fn process_winit_input(&mut self, events: &Vec<winit::Event>) -> Vec<Event<ACTION, ID>> {
+    pub fn process(&mut self, events: &Vec<winit::Event>) -> Vec<Event<ACTION, ID>> {
         let mut next = self.frame_data.clone();
         let raw = events.iter().flat_map(|e| winit_mapper::process_event(e, &mut next)).collect();
         self.frame_data = next;
