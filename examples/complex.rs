@@ -9,10 +9,8 @@ extern crate serde;
 extern crate glutin;
 
 extern crate remawin;
-extern crate remawin_glutin_mapper;
 
-use remawin_glutin_mapper::GlutinEventMapper;
-use remawin::{Event, WindowEvent, ControllerEvent};
+use remawin::{Event, WindowEvent, ControllerEvent, InputReMapper};
 use remawin::types::{MappedType, ActionMetadata, ActionArgument, Context, RawType, RawArgs};
 
 use glutin::GlContext;
@@ -136,8 +134,8 @@ fn main() {
 
     debug!("Window initialized");
 
-    let mut event_mapper = GlutinEventMapper::<ControllerAction, ContextId>::new((1024.0, 768.0));
-    event_mapper.remapper_mut()
+    let mut event_mapper = InputReMapper::<ControllerAction, ContextId>::new((1024.0, 768.0));
+    event_mapper
         .with_context(Context::new(ContextId::UI)
             .with_mapping(RawType::Char,
                           RawArgs::new(),
@@ -148,12 +146,12 @@ fn main() {
             .with_mapping(RawType::Motion,
                           RawArgs::new().with_state_active(UIAction::Click.into()),
                           UIAction::Drag.into()))
-        .with_bindings_from_file("examples/config/complex.ron")
+        .with_contexts(&mut remawin::util::contexts_from_file("config/complex.ron").unwrap())
         .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
     while running {
-        for event in event_mapper.process(&mut poll_events(&mut events_loop)) {
+        for event in event_mapper.process_winit_input(&mut poll_events(&mut events_loop)) {
             match event {
                 Event::Window(WindowEvent::Close) => {
                     println!("closing!");
@@ -164,7 +162,7 @@ fn main() {
                     running = false;
                 },
                 Event::Controller(ControllerEvent::Action(ControllerAction::Game(GameAction::ToggleUI), _)) => {
-                    event_mapper.remapper_mut().toggle_context(&ContextId::UI, 2);
+                    event_mapper.toggle_context(&ContextId::UI, 2);
                 }
                 Event::Controller(x) => {
                     println!("controller event: {:?}", x);

@@ -2,14 +2,12 @@
 extern crate log;
 extern crate glutin;
 extern crate remawin;
-extern crate remawin_glutin_mapper;
 
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-use remawin_glutin_mapper::GlutinEventMapper;
-use remawin::{Event, WindowEvent, ControllerEvent};
+use remawin::{Event, WindowEvent, ControllerEvent, InputReMapper};
 use remawin::types::{MappedType, ActionMetadata, ActionArgument};
 
 use glutin::GlContext;
@@ -69,14 +67,14 @@ fn main() {
 
     debug!("Window initialized");
 
-    let mut event_mapper = GlutinEventMapper::<Action, ContextId>::new((1024.0, 768.0));
-    event_mapper.remapper_mut()
-        .with_bindings_from_file("examples/config/simple.ron")
+    let mut event_mapper = InputReMapper::<Action, ContextId>::new((1024.0, 768.0));
+    event_mapper
+        .with_contexts(&mut remawin::util::contexts_from_file("config/simple.ron").unwrap())
         .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
     while running {
-        for event in event_mapper.process(&mut poll_events(&mut events_loop)) {
+        for event in event_mapper.process_winit_input(&mut poll_events(&mut events_loop)) {
             match event {
                 Event::Window(WindowEvent::Close) => {
                     println!("closing!");
