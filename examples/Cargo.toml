@@ -5,7 +5,7 @@ authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
 glutin = "*"
-rebindit = { path = "../rebindit/" }
+rebindit = { path = "../" }
 serde = "*"
 serde_derive = "*"
 log = "*"

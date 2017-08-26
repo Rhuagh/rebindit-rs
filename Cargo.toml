@@ -1,5 +1,13 @@
-[workspace]
-members = [
-    "examples",
-    "rebindit",
-]
+[package]
+name = "rebindit"
+version = "0.1.0"
+authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
+
+[dependencies]
+bitflags = "*"
+serde = "*"
+serde_derive = "*"
+ron = "*"
+time = "*"
+log = "*"
+winit = "*"
