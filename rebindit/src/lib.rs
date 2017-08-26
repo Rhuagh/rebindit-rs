@@ -14,13 +14,14 @@ extern crate log;
 
 pub mod event;
 pub mod types;
-pub mod mapping;
 pub mod util;
 
-pub use event::*;
-pub use types::{ActionMetadata, ActionArgument, MappedType, Context, StateStorage, StateInfo};
+mod mapping;
 
-use types::{ActiveContext, WindowData};
+pub use event::*;
+pub use types::{ActionMetadata, ActionArgument, MappedType, Context, StateInfo};
+
+use types::{ActiveContext, WindowData, StateStorage};
 
 use std::collections::HashMap;
 

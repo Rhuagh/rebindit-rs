@@ -10,9 +10,8 @@ extern crate glutin;
 
 extern crate rebindit;
 
-use rebindit::{Event, WindowEvent, ControllerEvent, InputRebinder};
-use rebindit::types::{MappedType, ActionMetadata, ActionArgument, Context, RawType, Mapping,
-                      MouseButton};
+use rebindit::*;
+use rebindit::types::{RawType, Mapping, MouseButton};
 
 use glutin::GlContext;
 
