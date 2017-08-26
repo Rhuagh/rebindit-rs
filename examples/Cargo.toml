@@ -1,26 +1,19 @@
 [package]
-name = "remawin-examples"
+name = "rebindit-examples"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
-glfw = "*"
 glutin = "*"
-remawin = { path = "../remawin/" }
-remawin_glutin_mapper = { path = "../remawin_glutin_mapper/" }
-remawin_glfw_mapper = { path = "../remawin_glfw_mapper/" }
+rebindit = { path = "../rebindit/" }
 serde = "*"
 serde_derive = "*"
 log = "*"
 env_logger = "*"
 
 [[example]]
-path = "glfw.rs"
-name = "glfw"
-
-[[example]]
-path = "glutin.rs"
-name = "glutin"
+path = "basic.rs"
+name = "basic"
 
 [[example]]
 path = "complex.rs"

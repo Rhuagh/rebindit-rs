@@ -1,7 +1,5 @@
 [workspace]
 members = [
     "examples",
-    "remawin",
-    "remawin_glfw_mapper",
-    "remawin_glutin_mapper",
+    "rebindit",
 ]

@@ -1,10 +1,13 @@
 [package]
-name = "remawin_glfw_mapper"
+name = "rebindit"
 version = "0.1.0"
 authors = ["Simon Rönnberg <simon.ronnberg@codemill.se>"]
 
 [dependencies]
-glfw = "*"
-remawin  = { path = "../remawin/" }
-log = "*"
+bitflags = "*"
 serde = "*"
+serde_derive = "*"
+ron = "*"
+time = "*"
+log = "*"
+winit = "*"
