@@ -11,3 +11,7 @@ ron = "*"
 time = "*"
 log = "*"
 winit = "*"
+
+[dev-dependencies]
+env_logger = "*"
+glutin = "*"

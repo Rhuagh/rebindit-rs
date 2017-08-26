@@ -69,7 +69,7 @@ fn main() {
 
     let mut event_mapper = InputRebinder::<Action, ContextId>::new((1024.0, 768.0));
     event_mapper
-        .with_contexts(&mut rebindit::util::contexts_from_file("config/simple.ron")
+        .with_contexts(&mut rebindit::util::contexts_from_file("examples/config/simple.ron")
             .unwrap())
         .activate_context(&ContextId::Default, 1);
 

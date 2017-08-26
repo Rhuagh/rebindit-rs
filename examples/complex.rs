@@ -149,7 +149,7 @@ fn main() {
                 ),
         )
         .with_contexts(&mut rebindit::util::contexts_from_file(
-            "config/complex.ron",
+            "examples/config/complex.ron",
         ).unwrap())
         .activate_context(&ContextId::Default, 1);
 
