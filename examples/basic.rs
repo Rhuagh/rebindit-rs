@@ -1,14 +1,14 @@
+extern crate glutin;
 #[macro_use]
 extern crate log;
-extern crate glutin;
 extern crate rebindit;
 
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-use rebindit::{Event, WindowEvent, ControllerEvent, InputRebinder};
-use rebindit::types::{MappedType, ActionMetadata, ActionArgument};
+use rebindit::{Event, InputRebinder};
+use rebindit::types::{ActionArgument, ActionMetadata, MappedType};
 
 use glutin::GlContext;
 
@@ -23,18 +23,20 @@ pub enum Action {
     Close,
     Text,
     MoveForward,
+    Alt,
     FireAbility1,
     RotateDirection,
 }
 
 impl ActionMetadata for Action {
     fn mapped_type(&self) -> MappedType {
-        match self {
-            &Action::Close => MappedType::Action,
-            &Action::Text => MappedType::Action,
-            &Action::MoveForward => MappedType::State,
-            &Action::FireAbility1 => MappedType::Action,
-            &Action::RotateDirection => MappedType::Range,
+        match *self {
+            Action::Close => MappedType::Action,
+            Action::Text => MappedType::Action,
+            Action::MoveForward => MappedType::State,
+            Action::Alt => MappedType::State,
+            Action::FireAbility1 => MappedType::Action,
+            Action::RotateDirection => MappedType::Range,
         }
     }
 
@@ -48,7 +50,9 @@ impl ActionMetadata for Action {
 
 fn poll_events(events_loop: &mut glutin::EventsLoop) -> Vec<glutin::Event> {
     let mut raw = Vec::default();
-    events_loop.poll_events(|event| { raw.push(event); });
+    events_loop.poll_events(|event| {
+        raw.push(event);
+    });
     raw
 }
 
@@ -69,19 +73,16 @@ fn main() {
 
     let mut event_mapper = InputRebinder::<Action, ContextId>::new((1024.0, 768.0));
     event_mapper
-        .with_contexts(&mut rebindit::util::contexts_from_file("examples/config/simple.ron")
-            .unwrap())
+        .with_contexts(&mut rebindit::util::contexts_from_file(
+            "examples/config/simple.ron",
+        ).unwrap())
         .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
     while running {
         for event in event_mapper.process(&poll_events(&mut events_loop)) {
             match event {
-                Event::Window(WindowEvent::Close) => {
-                    println!("closing!");
-                    running = false;
-                }
-                Event::Controller(ControllerEvent::Action(Action::Close, _)) => {
+                Event::Close | Event::Controller(Action::Close, ..) => {
                     println!("closing!");
                     running = false;
                 }

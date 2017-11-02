@@ -21,7 +21,6 @@
             ),
             (
                 raw_type: Key(Key1),
-                modifier: Some(ALT),
                 action: Game(FireAbility1),
             ),
             (

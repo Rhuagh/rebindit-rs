@@ -1,11 +1,11 @@
-use winit;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use winit;
 
-use std::hash::Hash;
-use std::cmp::Eq;
 use std::clone::Clone;
+use std::cmp::Eq;
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::str;
 
 #[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
@@ -192,28 +192,10 @@ pub enum RawState {
     Release,
 }
 
-bitflags! {
-    pub struct Modifiers: u32 {
-        const SHIFT = 1 << 0;
-        const CONTROL = 1 << 1;
-        const ALT = 1 << 2;
-        const SUPER = 1 << 3;
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub enum Modifier {
-    ALT,
-    CONTROL,
-    SHIFT,
-    SUPER,
-}
-
 #[derive(Debug, Clone, Deserialize)]
 pub enum ActionArgument {
     KeyCode,
     Value,
-    Modifiers,
     Action,
     CursorPosition,
     ContextId,
@@ -235,14 +217,11 @@ pub trait ActionMetadata {
 pub struct Mapping<ACTION: Clone> {
     pub raw_type: RawType,
     pub state: Option<RawState>,
-    pub modifier: Option<Modifier>,
     pub state_active: Option<ACTION>,
     pub action: ACTION,
 
-    #[serde(default = "default_mt")]
-    pub mapped_type: Option<MappedType>,
-    #[serde(default = "default_aa")]
-    pub action_args: Vec<ActionArgument>,
+    #[serde(default = "default_mt")] pub mapped_type: Option<MappedType>,
+    #[serde(default = "default_aa")] pub action_args: Vec<ActionArgument>,
 }
 
 fn default_mt() -> Option<MappedType> {
@@ -262,17 +241,11 @@ impl<ACTION: ActionMetadata + Clone> Mapping<ACTION> {
             action: action,
             state: None,
             state_active: None,
-            modifier: None,
         }
     }
 
     pub fn with_action(mut self, action: RawState) -> Self {
         self.state = Some(action);
-        self
-    }
-
-    pub fn with_modifier(mut self, modifier: Modifier) -> Self {
-        self.modifier = Some(modifier);
         self
     }
 
@@ -285,16 +258,12 @@ impl<ACTION: ActionMetadata + Clone> Mapping<ACTION> {
 impl<ACTION: Clone> Mapping<ACTION> {
     pub fn sanitize(&mut self) {
         match self.mapped_type {
-            Some(MappedType::Action) => {
-                if self.state == None {
-                    self.state = Some(RawState::Release);
-                }
-            }
-            Some(MappedType::State) => {
-                if self.state != None {
-                    self.state = None;
-                }
-            }
+            Some(MappedType::Action) => if self.state == None {
+                self.state = Some(RawState::Release);
+            },
+            Some(MappedType::State) => if self.state != None {
+                self.state = None;
+            },
             _ => (),
         }
     }
@@ -321,10 +290,7 @@ where
     }
 
     pub fn new_with_mappings(id: ID, mappings: Vec<Mapping<ACTION>>) -> Self {
-        Context {
-            id: id,
-            mappings: mappings,
-        }
+        Context { id, mappings }
     }
 
     pub fn with_mapping(mut self, mapping: Mapping<ACTION>) -> Self {
@@ -338,9 +304,7 @@ where
     }
 
     pub fn sanitize(&mut self) {
-        for mut m in &mut self.mappings {
-            m.sanitize();
-        }
+        self.mappings.iter_mut().for_each(|m| m.sanitize());
     }
 }
 
@@ -371,7 +335,7 @@ where
 {
     pub fn new(priority: u32, context_id: &ID) -> ActiveContext<ID> {
         ActiveContext {
-            priority: priority,
+            priority,
             context_id: context_id.clone(),
         }
     }
@@ -430,7 +394,9 @@ where
     ACTION: Hash + Eq + Clone,
 {
     pub fn new() -> StateStorage<ACTION> {
-        StateStorage { states: HashMap::default() }
+        StateStorage {
+            states: HashMap::default(),
+        }
     }
 
     pub fn get(&self, state: &ACTION) -> Option<StateInfo> {
@@ -455,17 +421,6 @@ impl From<winit::ElementState> for RawState {
             winit::ElementState::Pressed => RawState::Press,
             winit::ElementState::Released => RawState::Release,
         }
-    }
-}
-
-impl From<winit::ModifiersState> for Modifiers {
-    fn from(modifiers: winit::ModifiersState) -> Self {
-        let mut m = Modifiers::empty();
-        m.set(SHIFT, modifiers.shift);
-        m.set(CONTROL, modifiers.ctrl);
-        m.set(ALT, modifiers.alt);
-        m.set(SUPER, modifiers.logo);
-        m
     }
 }
 

@@ -3,6 +3,10 @@
         id: Default,
         mappings: [
             (
+                raw_type: Key(LAlt),
+                action: Alt,
+            ),
+            (
                 raw_type: Key(Escape),
                 state : Some(Release),
                 action: Close,
@@ -14,7 +18,7 @@
             (
                 raw_type: Key(Key1),
                 state : Some(Release),
-                modifier : Some(ALT),
+                state_active: Some(Alt),
                 action: FireAbility1,
             ),
             (

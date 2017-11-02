@@ -1,17 +1,18 @@
+extern crate env_logger;
 #[macro_use]
 extern crate log;
-extern crate env_logger;
 
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 
 extern crate glutin;
 
 extern crate rebindit;
 
 use rebindit::*;
-use rebindit::types::{RawType, Mapping, MouseButton};
+use rebindit::types::{Mapping, MouseButton, RawType};
+use rebindit::event::ActionType;
 
 use glutin::GlContext;
 
@@ -102,7 +103,9 @@ impl ActionMetadata for ControllerAction {
 
 fn poll_events(events_loop: &mut glutin::EventsLoop) -> Vec<glutin::Event> {
     let mut raw = Vec::default();
-    events_loop.poll_events(|event| { raw.push(event); });
+    events_loop.poll_events(|event| {
+        raw.push(event);
+    });
     raw
 }
 
@@ -154,28 +157,24 @@ fn main() {
         .activate_context(&ContextId::Default, 1);
 
     let mut running = true;
+    let mut ui_active = false;
     while running {
         for event in event_mapper.process(&poll_events(&mut events_loop)) {
             match event {
-                Event::Window(WindowEvent::Close) => {
+                Event::Close | Event::Controller(ControllerAction::UI(UIAction::Close), ..) => {
                     println!("closing!");
                     running = false;
                 }
-                Event::Controller(ControllerEvent::Action(a, _)) => {
-                    match a {
-                        ControllerAction::UI(UIAction::Close) => {
-                            println!("closing!");
-                            running = false;
-                        }
-                        ControllerAction::Game(GameAction::ToggleUI) => {
-                            event_mapper.toggle_context(&ContextId::UI, 2);
-                        }
-                        x => {
-                            println!("controller event: {:?}", x);
-                        }
+                Event::Controller(ControllerAction::Game(GameAction::ToggleUI), ..) => {
+                    if ui_active {
+                        ui_active = false;
+                        event_mapper.deactivate_context(&ContextId::UI);
+                    } else {
+                        ui_active = true;
+                        event_mapper.activate_context(&ContextId::UI, 2);
                     }
                 }
-                Event::Controller(x) => {
+                Event::Controller(x, ..) => {
                     println!("controller event: {:?}", x);
                 }
                 _ => (),

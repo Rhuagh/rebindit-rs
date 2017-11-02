@@ -7,13 +7,6 @@ pub enum FocusAction {
     Exit,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum WindowEvent {
-    Resize(u32, u32),
-    Focus(FocusAction),
-    Close,
-}
-
 pub type StateDuration = f64;
 pub type RangeDiff = (f64, f64);
 
@@ -31,41 +24,22 @@ where
 {
     KeyCode(super::types::KeyCode),
     Value(char),
-    Modifiers(super::types::Modifiers),
     Action(super::types::RawState),
     CursorPosition(f64, f64),
     ContextId(ID),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ControllerEvent<ACTION: Debug, ID: Debug + Clone> {
-    Action(ACTION, Vec<Argument<ID>>),
-    State(ACTION, StateAction, StateDuration, Vec<Argument<ID>>),
-    Range(ACTION, RangeDiff, Vec<Argument<ID>>),
+pub enum ActionType {
+    Action,
+    State(StateAction, StateDuration),
+    Range(RangeDiff),
 }
 
 #[derive(Debug, Clone)]
 pub enum Event<ACTION: Debug, ID: Debug + Clone> {
-    Window(WindowEvent),
-    Controller(ControllerEvent<ACTION, ID>),
-}
-
-impl<A, I> Into<Event<A, I>> for WindowEvent
-where
-    A: Debug,
-    I: Debug + Clone,
-{
-    fn into(self) -> Event<A, I> {
-        Event::Window(self)
-    }
-}
-
-impl<A, I> Into<Event<A, I>> for ControllerEvent<A, I>
-where
-    A: Debug,
-    I: Debug + Clone,
-{
-    fn into(self) -> Event<A, I> {
-        Event::Controller(self)
-    }
+    Controller(ACTION, ActionType, Vec<Argument<ID>>),
+    Resize(u32, u32),
+    Focus(FocusAction),
+    Close,
 }
